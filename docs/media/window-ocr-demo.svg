@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 760" width="1280" height="760" role="img" aria-label="Penguin Translate Window OCR, before and after. The left half shows an original Japanese game menu (Options, Start Game, Continue, Save, Load, Volume Settings, Quit); the right half shows the same menu with a live OCR overlay translating each label into Simplified Chinese inside green detection boxes. Rows are aligned so each Japanese term sits beside its Chinese translation.">
+  <defs>
+    <linearGradient id="wood" x1="0" y1="34" x2="0" y2="760" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3a2817"/>
+      <stop offset="0.55" stop-color="#46311d"/>
+      <stop offset="1" stop-color="#2a1c0e"/>
+    </linearGradient>
+    <linearGradient id="rock" x1="0" y1="0" x2="180" y2="400" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#19120a"/>
+      <stop offset="1" stop-color="#241a10"/>
+    </linearGradient>
+    <radialGradient id="vig" cx="50%" cy="44%" r="72%">
+      <stop offset="0" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.55"/>
+    </radialGradient>
+    <clipPath id="round"><rect x="0" y="0" width="1280" height="760" rx="14"/></clipPath>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+    <style>
+      text { font-family: "Segoe UI", "Noto Sans", system-ui, sans-serif; }
+      .cjk { font-family: "Noto Sans CJK SC", "Noto Sans CJK JP", "Microsoft YaHei", "PingFang SC", "Yu Gothic UI", "Hiragino Sans", sans-serif; }
+      .jtext { fill:#f1f1f1; }
+      .ztext { fill:#17120a; font-weight:700; }
+      .hdrJ  { fill:#ffffff; font-weight:700; }
+      .badge { fill:#e9eef3; font-weight:600; }
+    </style>
+  </defs>
+
+  <g clip-path="url(#round)">
+    <!-- window chrome (one window, shown before | after) -->
+    <rect x="0" y="0" width="1280" height="34" fill="#27313d"/>
+    <text x="16" y="22" font-size="13" fill="#c7d0d9">Application</text>
+    <g fill="#9aa6b2"><rect x="1196" y="16" width="12" height="2"/><rect x="1224" y="11" width="11" height="11" fill="none" stroke="#9aa6b2" stroke-width="2"/></g>
+    <path d="M1252 11 l11 11 M1263 11 l-11 11" stroke="#9aa6b2" stroke-width="2"/>
+
+    <!-- scene -->
+    <rect x="0" y="34" width="1280" height="726" fill="url(#wood)"/>
+    <g stroke="#000000" stroke-opacity="0.28" stroke-width="2">
+      <line x1="0" y1="120" x2="1280" y2="120"/>
+      <line x1="0" y1="206" x2="1280" y2="206"/>
+      <line x1="0" y1="292" x2="1280" y2="292"/>
+      <line x1="0" y1="378" x2="1280" y2="378"/>
+      <line x1="0" y1="464" x2="1280" y2="464"/>
+      <line x1="0" y1="550" x2="1280" y2="550"/>
+      <line x1="0" y1="636" x2="1280" y2="636"/>
+      <line x1="0" y1="722" x2="1280" y2="722"/>
+    </g>
+    <g stroke="#caa06a" stroke-opacity="0.08" stroke-width="1">
+      <line x1="0" y1="122" x2="1280" y2="122"/>
+      <line x1="0" y1="294" x2="1280" y2="294"/>
+      <line x1="0" y1="466" x2="1280" y2="466"/>
+      <line x1="0" y1="638" x2="1280" y2="638"/>
+    </g>
+    <path d="M0 34 L150 34 L96 250 L150 470 L60 760 L0 760 Z" fill="url(#rock)"/>
+    <rect x="0" y="34" width="1280" height="726" fill="url(#vig)"/>
+
+    <!-- ============ BEFORE: original Japanese menu (left half) ============ -->
+    <g>
+      <!-- header -->
+      <circle cx="190" cy="146" r="13" fill="none" stroke="#ffffff" stroke-width="2.5"/>
+      <circle cx="190" cy="146" r="4" fill="#ffffff"/>
+      <text x="216" y="156" class="cjk hdrJ" font-size="30">オプション</text>
+      <!-- menu buttons -->
+      <g class="cjk jtext" font-size="27" text-anchor="middle">
+        <g><rect x="162" y="206" width="300" height="54" rx="9" fill="#15110a" fill-opacity="0.5" stroke="#ffffff" stroke-opacity="0.22" stroke-width="1.5"/><text x="312" y="241">ゲーム開始</text></g>
+        <g><rect x="162" y="286" width="300" height="54" rx="9" fill="#15110a" fill-opacity="0.5" stroke="#ffffff" stroke-opacity="0.22" stroke-width="1.5"/><text x="312" y="321">つづきから</text></g>
+        <g><rect x="162" y="366" width="300" height="54" rx="9" fill="#15110a" fill-opacity="0.5" stroke="#ffffff" stroke-opacity="0.22" stroke-width="1.5"/><text x="312" y="401">セーブ</text></g>
+        <g><rect x="162" y="446" width="300" height="54" rx="9" fill="#15110a" fill-opacity="0.5" stroke="#ffffff" stroke-opacity="0.22" stroke-width="1.5"/><text x="312" y="481">ロード</text></g>
+        <g><rect x="162" y="526" width="300" height="54" rx="9" fill="#15110a" fill-opacity="0.5" stroke="#ffffff" stroke-opacity="0.22" stroke-width="1.5"/><text x="312" y="561">音量設定</text></g>
+        <g><rect x="162" y="606" width="300" height="54" rx="9" fill="#15110a" fill-opacity="0.5" stroke="#ffffff" stroke-opacity="0.22" stroke-width="1.5"/><text x="312" y="641">終了</text></g>
+      </g>
+      <!-- selection cursor -->
+      <path d="M132 300 l22 13 -22 13 z" fill="#27c0e6"/>
+    </g>
+
+    <!-- ============ AFTER: Penguin Translate OCR overlay → Chinese (right half) ============ -->
+    <g>
+      <!-- header -->
+      <g filter="url(#soft)">
+        <rect x="818" y="120" width="300" height="54" rx="8" fill="#f5eedd" stroke="#33dd57" stroke-width="3"/>
+        <text x="968" y="156" class="cjk ztext" font-size="29" text-anchor="middle">选项</text>
+      </g>
+      <!-- menu buttons -->
+      <g class="cjk ztext" font-size="27" text-anchor="middle">
+        <g filter="url(#soft)"><rect x="818" y="206" width="300" height="54" rx="8" fill="#f5eedd" stroke="#33dd57" stroke-width="3"/><text x="968" y="241">开始游戏</text></g>
+        <g filter="url(#soft)"><rect x="818" y="286" width="300" height="54" rx="8" fill="#f5eedd" stroke="#33dd57" stroke-width="3"/><text x="968" y="321">继续游戏</text></g>
+        <g filter="url(#soft)"><rect x="818" y="366" width="300" height="54" rx="8" fill="#f5eedd" stroke="#33dd57" stroke-width="3"/><text x="968" y="401">保存</text></g>
+        <g filter="url(#soft)"><rect x="818" y="446" width="300" height="54" rx="8" fill="#f5eedd" stroke="#33dd57" stroke-width="3"/><text x="968" y="481">读取</text></g>
+        <g filter="url(#soft)"><rect x="818" y="526" width="300" height="54" rx="8" fill="#f5eedd" stroke="#33dd57" stroke-width="3"/><text x="968" y="561">音量设置</text></g>
+        <g filter="url(#soft)"><rect x="818" y="606" width="300" height="54" rx="8" fill="#f5eedd" stroke="#33dd57" stroke-width="3"/><text x="968" y="641">退出</text></g>
+      </g>
+      <path d="M788 300 l22 13 -22 13 z" fill="#27c0e6"/>
+    </g>
+
+    <!-- ============ wipe divider + handle ============ -->
+    <line x1="640" y1="34" x2="640" y2="760" stroke="#ffffff" stroke-opacity="0.9" stroke-width="3"/>
+    <circle cx="640" cy="410" r="26" fill="#ffffff" fill-opacity="0.95"/>
+    <path d="M634 402 l-9 8 9 8 z M646 402 l9 8 -9 8 z" fill="#2a2f36"/>
+
+    <!-- ============ corner badges ============ -->
+    <g>
+      <rect x="24" y="50" width="196" height="34" rx="17" fill="#0b0e12" fill-opacity="0.62"/>
+      <rect x="40" y="61" width="18" height="13" rx="2" fill="none" stroke="#e9eef3" stroke-width="2"/>
+      <text x="70" y="72" class="cjk badge" font-size="15">Original · 日本語</text>
+    </g>
+    <g>
+      <rect x="996" y="50" width="260" height="34" rx="17" fill="#0b0e12" fill-opacity="0.62"/>
+      <circle cx="1016" cy="67" r="6" fill="#33dd57"/>
+      <text x="1030" y="72" class="cjk badge" font-size="15">Penguin Translate · 中文</text>
+    </g>
+
+    <rect x="0.5" y="0.5" width="1279" height="759" rx="14" fill="none" stroke="#000000" stroke-opacity="0.4"/>
+  </g>
+</svg>

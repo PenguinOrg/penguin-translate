@@ -1,0 +1,23 @@
+.overlaybar { flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 9px; padding: 8px 14px;
+  background: #191a1e; border-bottom: 1px solid var(--border); font-size: 12.5px; color: var(--text); }
+.overlaybar[hidden] { display: none; }
+.overlaybar .ob-label { color: var(--text-bright); font-weight: 600; }
+.overlaybar .ob-window { max-width: 24rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 12.5px; padding: 6px 9px; }
+.overlaybar .ob-icon { width: 30px; height: 30px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); color: var(--muted); font-size: 13px; cursor: pointer; }
+.overlaybar .ob-icon:hover { color: var(--text); border-color: var(--border-strong); }
+.overlaybar .ob-hint { color: var(--faint); font-size: 11.5px; }
+.overlaybar .ob-spacer { flex: 1; }
+.overlaybar .ob-start { background: var(--accent); border: 1px solid var(--accent); color: #fff; border-radius: 8px; padding: 7px 14px; font-size: 12.5px; cursor: pointer; }
+.overlaybar .ob-stop { background: #3a2026; border: 1px solid #5c3038; color: #f0b9c0; border-radius: 8px; padding: 7px 14px; font-size: 12.5px; cursor: pointer; }
+.overlaybar .ob-change, .overlaybar .ob-text { background: var(--surface-2); border: 1px solid var(--border-strong); color: var(--text); border-radius: 8px; padding: 7px 12px; font-size: 12.5px; cursor: pointer; }
+.overlaybar .ob-live { display: flex; align-items: center; gap: 8px; color: var(--text-bright); }
+.overlaybar .ob-live .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px rgba(61,201,127,.18); }
+.overlaybar .ob-status { color: var(--faint); font-size: 11.5px; min-width: 4rem; }
+
+.overlaybar .ob-debug { flex-basis: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+.overlaybar .ob-debug .panel { display: flex; flex-direction: column; gap: 4px; }
+.overlaybar .ob-debug label { font-size: 10.5px; color: var(--faint); text-transform: uppercase; letter-spacing: .05em; }
+.overlaybar .ob-debug textarea { width: 100%; min-height: 84px; resize: vertical; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 12px; padding: 7px 9px; }
+
+.appbar #btnOverlay[data-running="true"] { border-color: rgba(61,201,127,.55); color: var(--text-bright); }
+.appbar #btnOverlay[data-running="true"]::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); display: inline-block; margin-right: 6px; box-shadow: 0 0 0 3px rgba(61,201,127,.18); }

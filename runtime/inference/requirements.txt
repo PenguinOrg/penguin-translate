@@ -1,0 +1,24 @@
+# Penguin Translate engine dependencies. Mirrors the proven vrct-speech stack
+# (faster-whisper + ctranslate2/NLLB + cutlet/jaconv) and adds:
+#   * fugashi/unidic-lite (transitively via cutlet) for furigana token reads
+#   * soundcard for the engine-side success-playback into a chosen output device
+#
+# GPU: needs NVIDIA driver + CUDA-enabled wheels. If VRAM stays at 0, reinstall:
+#   pip install -U ctranslate2   (must be a CUDA build; see https://opennmt.net/CTranslate2/installation.html )
+#   pip install -U torch --index-url https://download.pytorch.org/whl/cu124
+# Engine logs a line like: translation-overlay-engine: cuda:0 (...). Set TO_FORCE_CPU=1 to force CPU.
+fastapi>=0.110
+python-multipart>=0.0.9
+uvicorn[standard]>=0.27
+faster-whisper>=1.0.0
+ctranslate2>=4.0
+transformers>=4.36
+torch
+sentencepiece
+cutlet>=0.2
+unidic-lite>=1.0.8
+jaconv>=0.3
+soundcard>=0.4.2
+numpy>=1.24
+pypinyin>=0.50
+hangul-romanize>=0.1.0

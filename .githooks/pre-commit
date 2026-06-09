@@ -1,0 +1,56 @@
+#!/bin/sh
+# Block secrets and local artifacts from being committed.
+
+set -e
+
+blocked=0
+
+for path in $(git diff --cached --name-only --diff-filter=ACM); do
+	case "$path" in
+		.ssh/*|*/.ssh/*)
+			echo "pre-commit: refuse .ssh/ — $path"
+			blocked=1
+			;;
+		*settings.json)
+			echo "pre-commit: refuse settings.json — $path"
+			blocked=1
+			;;
+		*config.json)
+			case "$path" in
+				*config.example.json) ;;
+				*)
+					echo "pre-commit: refuse config.json — $path (use *.example.json)"
+					blocked=1
+					;;
+			esac
+			;;
+		.env|.env.*|*/.env|*/.env.*)
+			echo "pre-commit: refuse env file — $path"
+			blocked=1
+			;;
+		*build/test-run/*|*/venv/*|*/__pycache__/*|*/target/*)
+			echo "pre-commit: refuse build/runtime artifact — $path"
+			blocked=1
+			;;
+	esac
+done
+
+# Scan staged text for likely API keys (skip example templates).
+while IFS= read -r path; do
+	case "$path" in
+		*config.example.json|*.md|*.example.*) continue ;;
+	esac
+	if git show ":$path" 2>/dev/null | grep -qE 'sk-(svcacct|or-v1|proj|live)-[A-Za-z0-9_-]{16,}'; then
+		echo "pre-commit: possible API key in $path"
+		blocked=1
+	fi
+done <<EOF
+$(git diff --cached --name-only --diff-filter=ACM)
+EOF
+
+if [ "$blocked" -ne 0 ]; then
+	echo "pre-commit: commit aborted."
+	exit 1
+fi
+
+exit 0

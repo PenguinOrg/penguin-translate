@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pipeline latency</title>
+<link rel="stylesheet" href="shared/ui.css" />
+<style>
+  body { padding: 1rem 1.2rem; max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 1.1rem; margin: 0 0 0.2rem; color: var(--text-bright); }
+  .sub { font-size: 0.76rem; color: var(--muted); margin: 0 0 0.8rem; }
+  .status { font-size: 0.74rem; color: var(--muted); }
+  .status.live { color: var(--ok); }
+  .status.down { color: var(--err); }
+  .toggle { display: inline-flex; gap: 0; margin: 0 0 1rem; border: 1px solid var(--border);
+    border-radius: var(--r-s); overflow: hidden; }
+  .toggle button { background: var(--surface); color: var(--muted); border: 0;
+    padding: 0.35rem 0.8rem; font-size: 0.78rem; cursor: pointer; }
+  .toggle button + button { border-left: 1px solid var(--border); }
+  .toggle button.active { background: var(--accent, #3b6cff); color: #fff; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r-m); padding: 0.8rem 0.9rem; margin: 0.7rem 0;
+  }
+  .card h2 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--muted); margin: 0 0 0.6rem; font-weight: 600; }
+  .bar { display: flex; height: 26px; width: 100%; border-radius: var(--r-s);
+    overflow: hidden; background: var(--surface-2); border: 1px solid var(--border); }
+  .seg { height: 100%; min-width: 0; position: relative; }
+  .seg[title] { cursor: help; }
+  .legend { display: flex; flex-wrap: wrap; gap: 0.4rem 0.9rem; margin-top: 0.5rem; font-size: 0.72rem; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 0.3rem; }
+  .swatch { width: 11px; height: 11px; border-radius: 2px; display: inline-block; }
+  .meta { font-size: 0.74rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  table.stages { width: 100%; border-collapse: collapse; font-size: 0.76rem; font-variant-numeric: tabular-nums; }
+  table.stages td { padding: 0.18rem 0.3rem; border-bottom: 1px solid var(--border); }
+  table.stages td.k { color: var(--muted); }
+  table.stages td.v { text-align: right; color: var(--text-bright); }
+  table.stages td.dot { width: 14px; }
+  canvas { width: 100%; height: 140px; display: block; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+  @media (max-width: 720px) { .row { grid-template-columns: 1fr; } }
+  .empty { color: var(--faint); font-size: 0.8rem; padding: 0.5rem 0; }
+</style>
+</head>
+<body>
+  <h1>Pipeline latency</h1>
+  <p class="sub"><span id="src-desc"></span> All durations in microseconds (monotonic clocks). <span id="status" class="status">connecting…</span></p>
+
+  <div class="toggle" id="source-toggle">
+    <button data-src="captions" class="active">Captions</button>
+    <button data-src="window">Window translate</button>
+  </div>
+
+  <div class="card">
+    <h2>Latest <span id="latest-kind"></span> — end to end (<span id="latest-idlabel">id</span> <span id="latest-id">—</span>, total <span id="latest-total">—</span>)</h2>
+    <div id="e2e"><div class="empty">Waiting for activity…</div></div>
+    <div class="legend" id="legend"></div>
+  </div>
+
+  <div class="row" id="sides"></div>
+
+  <div class="card">
+    <h2>Recent totals (last <span id="hist-n">0</span>)</h2>
+    <canvas id="hist" width="1040" height="140"></canvas>
+    <div class="meta" id="hist-meta"></div>
+  </div>
+
+<script>
+// Two pipelines share this view. Each "source" declares its endpoints, the id
+// field that joins a record's sides, and the ordered stages per side. The render
+// code is generic over this config so the Captions/Window toggle just repoints it.
+const SOURCES = {
+  captions: {
+    label: "captions", kind: "caption", idField: "req_id",
+    desc: "Per-caption latency across the Go host and the Rust overlay subprocess, joined by request id.",
+    endpoint: "/api/overlay/timings", stream: "/api/overlay/timings/stream",
+    sides: [
+      { key: "go",   label: "Go host",      stages: ["receive", "denoise", "transcribe", "translate", "ipc_write"] },
+      { key: "rust", label: "Rust overlay", stages: ["deserialize", "queue", "layout", "render", "present"] },
+    ],
+    histNote: "red = Go host (capture→IPC), green = Rust overlay (render→present)",
+  },
+  window: {
+    label: "window translate", kind: "frame", idField: "frame_id",
+    desc: "Per-frame latency for the in-process window pipeline: runner (capture→translate) then the overlay UI thread (render→present), joined by frame id.",
+    endpoint: "/api/wt/timings", stream: "/api/wt/timings/stream",
+    sides: [
+      { key: "runner",  label: "Runner",         stages: ["capture", "framehash", "ocr", "resolve", "translate"] },
+      { key: "overlay", label: "Overlay thread", stages: ["render", "present"] },
+    ],
+    histNote: "red = Runner (capture→translate), green = Overlay thread (render→present)",
+  },
+};
+
+// Stable color per stage name (shared across both sources; names that collide
+// across sources are never shown together, since only one source is active).
+const COLORS = {
+  receive: "#5b8cff", denoise: "#7a6bff", transcribe: "#e8606f", translate: "#eeb04e",
+  ipc_write: "#3dc97f", deserialize: "#48b6c9", queue: "#9aa0a6", layout: "#c98fd6",
+  render: "#5bd0a0", present: "#e0925b",
+  capture: "#5b8cff", framehash: "#9aa0a6", ocr: "#e8606f", resolve: "#48b6c9",
+};
+const SIDE_HIST_COLORS = ["#e8606f", "#5bd0a0"]; // bottom side, top side
+
+const hist = [];        // recent merged records for the active source
+const HIST_MAX = 120;
+
+let cur = SOURCES.captions;
+let curKey = "captions";
+
+const $ = (id) => document.getElementById(id);
+const color = (s) => COLORS[s] || "#888";
+
+function fmt(us) {
+  if (us == null) return "—";
+  if (us >= 1000) return (us / 1000).toFixed(us >= 10000 ? 1 : 2) + " ms";
+  return us + " µs";
+}
+
+function recID(rec) { return rec[cur.idField]; }
+function sideSpans(rec, side) {
+  const s = rec[side.key];
+  return s && s.spans_us ? s.spans_us : null;
+}
+function sideTotal(rec, side) {
+  const sp = sideSpans(rec, side);
+  if (!sp) return 0;
+  return Object.values(sp).reduce((a, b) => a + b, 0);
+}
+
+function renderE2E(rec) {
+  const parts = [];
+  cur.sides.forEach((side) => {
+    const sp = sideSpans(rec, side) || {};
+    side.stages.forEach((s) => { if (sp[s] != null) parts.push([s, sp[s]]); });
+  });
+  const total = parts.reduce((a, [, v]) => a + v, 0);
+  $("latest-id").textContent = recID(rec);
+  $("latest-total").textContent = fmt(total);
+
+  if (!parts.length || total === 0) {
+    $("e2e").innerHTML = '<div class="empty">No stage data yet.</div>';
+    $("legend").innerHTML = "";
+    return;
+  }
+  $("e2e").innerHTML = `<div class="bar">${parts.map(([s, v]) => {
+    const pct = (v / total) * 100;
+    return `<div class="seg" style="width:${pct}%;background:${color(s)}" title="${s}: ${fmt(v)}"></div>`;
+  }).join("")}</div>`;
+  $("legend").innerHTML = parts.map(([s, v]) =>
+    `<span><i class="swatch" style="background:${color(s)}"></i>${s} ${fmt(v)}</span>`
+  ).join("");
+}
+
+function buildSideCards() {
+  $("sides").innerHTML = cur.sides.map((side) =>
+    `<div class="card"><h2>${side.label}</h2>` +
+    `<table class="stages"><tbody id="tbl-${side.key}"></tbody></table></div>`
+  ).join("");
+}
+
+function renderTables(rec) {
+  cur.sides.forEach((side) => {
+    const body = $("tbl-" + side.key);
+    if (!body) return;
+    const sp = sideSpans(rec, side);
+    if (!sp) { body.innerHTML = '<tr><td class="empty">no data</td></tr>'; return; }
+    const total = sideTotal(rec, side);
+    body.innerHTML = side.stages.filter((s) => sp[s] != null).map((s) =>
+      `<tr><td class="dot"><i class="swatch" style="background:${color(s)}"></i></td>` +
+      `<td class="k">${s}</td><td class="v">${fmt(sp[s])}</td></tr>`
+    ).join("") + `<tr><td></td><td class="k"><b>total</b></td><td class="v"><b>${fmt(total)}</b></td></tr>`;
+  });
+}
+
+function drawHist() {
+  const c = $("hist"), ctx = c.getContext("2d");
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+  $("hist-n").textContent = hist.length;
+  if (!hist.length) { $("hist-meta").textContent = ""; return; }
+  const totals = hist.map((r) => cur.sides.reduce((a, side) => a + sideTotal(r, side), 0));
+  const max = Math.max(...totals, 1);
+  const bw = W / HIST_MAX;
+  hist.forEach((r, i) => {
+    const x = i * bw;
+    let y = H;
+    cur.sides.forEach((side, si) => {
+      const h = (sideTotal(r, side) / max) * (H - 4);
+      ctx.fillStyle = SIDE_HIST_COLORS[si % SIDE_HIST_COLORS.length];
+      ctx.fillRect(x, y - h, Math.max(bw - 1, 1), h);
+      y -= h;
+    });
+  });
+  $("hist-meta").textContent =
+    `latest ${fmt(totals[totals.length - 1])} · max ${fmt(max)} · ${cur.histNote}`;
+}
+
+function rerender() {
+  if (!hist.length) {
+    $("e2e").innerHTML = '<div class="empty">Waiting for activity…</div>';
+    $("legend").innerHTML = "";
+    $("latest-id").textContent = "—";
+    $("latest-total").textContent = "—";
+    cur.sides.forEach((side) => {
+      const b = $("tbl-" + side.key);
+      if (b) b.innerHTML = '<tr><td class="empty">no data</td></tr>';
+    });
+    drawHist();
+    return;
+  }
+  const latest = hist[hist.length - 1];
+  renderE2E(latest);
+  renderTables(latest);
+  drawHist();
+}
+
+// ingest one record (from the SSE stream). A record's sides arrive separately,
+// so replace in place when we already have this id.
+function ingest(rec) {
+  const id = recID(rec);
+  const idx = hist.findIndex((r) => recID(r) === id);
+  if (idx >= 0) hist[idx] = rec;
+  else {
+    hist.push(rec);
+    if (hist.length > HIST_MAX) hist.shift();
+  }
+  rerender();
+}
+
+// Replace the whole history from a snapshot (newest-first), used while polling.
+function loadSnapshot(list) {
+  const oldestFirst = list.slice().reverse().slice(-HIST_MAX);
+  hist.length = 0;
+  for (const r of oldestFirst) hist.push(r);
+  rerender();
+}
+
+function setStatus(text, cls) {
+  const el = $("status");
+  el.textContent = text;
+  el.className = "status" + (cls ? " " + cls : "");
+}
+
+function applyHeader() {
+  $("src-desc").textContent = cur.desc;
+  $("latest-kind").textContent = cur.kind;
+  $("latest-idlabel").textContent = cur.idField.replace("_", " ");
+}
+
+let es = null;
+let pollTimer = null;
+let streaming = false;
+
+async function pollOnce() {
+  const res = await fetch(cur.endpoint, { cache: "no-store" });
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  const data = await res.json();
+  loadSnapshot(data.timings || []);
+}
+
+function startPolling() {
+  if (pollTimer) return;
+  const tick = () => {
+    if (streaming) return; // stream took over; skip this tick
+    pollOnce()
+      .then(() => { if (!streaming) setStatus("live (polling 1s)", "live"); })
+      .catch((e) => setStatus("backend unreachable — is the app build current? (" + (e.message || e) + ")", "down"));
+  };
+  tick();
+  pollTimer = setInterval(tick, 1000);
+}
+
+// SSE is an optional upgrade: plain requests (polling) always work through the
+// desktop webview, but streaming responses may not. We poll as the workhorse and
+// only switch to the stream once a message actually arrives over it.
+function stopStream() {
+  if (es) { try { es.close(); } catch (e) {} es = null; }
+}
+function tryStreamUpgrade() {
+  stopStream();
+  try {
+    es = new EventSource(cur.stream);
+  } catch (e) {
+    return;
+  }
+  es.onmessage = (ev) => {
+    streaming = true;
+    setStatus("live (stream)", "live");
+    try { ingest(JSON.parse(ev.data)); } catch (e) {}
+  };
+  es.onerror = () => {
+    // Stream unavailable/closed — polling keeps running, so just note it and let
+    // EventSource attempt its own reconnect.
+    streaming = false;
+  };
+}
+
+function switchSource(key) {
+  if (key === curKey || !SOURCES[key]) return;
+  curKey = key;
+  cur = SOURCES[key];
+  streaming = false;
+  hist.length = 0;
+  for (const b of document.querySelectorAll("#source-toggle button")) {
+    b.classList.toggle("active", b.dataset.src === key);
+  }
+  applyHeader();
+  buildSideCards();
+  setStatus("connecting…");
+  rerender();
+  pollOnce()
+    .then(() => setStatus("live (polling 1s)", "live"))
+    .catch((e) => setStatus("backend unreachable — is the app build current? (" + (e.message || e) + ")", "down"));
+  tryStreamUpgrade();
+}
+
+document.getElementById("source-toggle").addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (b) switchSource(b.dataset.src);
+});
+
+applyHeader();
+buildSideCards();
+setStatus("connecting…");
+startPolling();
+tryStreamUpgrade();
+</script>
+</body>
+</html>

@@ -1,0 +1,155 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 820" width="1280" height="820" role="img" aria-label="Penguin Translate main window, localized in Chinese. The user speaks Chinese (ZH) and translates into Japanese and Korean. An outgoing Chinese line is shown translated into Japanese and Korean; an incoming Japanese line and an incoming Korean line are each transcribed and translated back into Chinese. A bottom bar has microphone and headphones selectors, a reply field, and a live transcribing indicator.">
+  <defs>
+    <clipPath id="win"><rect x="0" y="0" width="1280" height="820" rx="14"/></clipPath>
+    <style>
+      text { font-family: "Segoe UI", "Noto Sans", system-ui, sans-serif; }
+      .cjk { font-family: "Noto Sans CJK SC", "Noto Sans CJK JP", "Noto Sans CJK KR", "Microsoft YaHei", "Malgun Gothic", "PingFang SC", sans-serif; }
+      .pri { fill:#e8eaed; }
+      .mut { fill:#8a93a0; }
+      .fnt { fill:#6b7280; }
+    </style>
+  </defs>
+
+  <g clip-path="url(#win)">
+    <rect x="0" y="0" width="1280" height="820" fill="#14161c"/>
+
+    <!-- title bar -->
+    <rect x="0" y="0" width="1280" height="34" fill="#1b1e26"/>
+    <rect x="14" y="13" width="9" height="9" rx="2" fill="#2dd4bf"/>
+    <text x="30" y="22" font-size="13" class="cjk pri">企鹅翻译 0.1.0</text>
+    <g fill="#9aa6b2"><rect x="1196" y="16" width="12" height="2"/><rect x="1224" y="11" width="11" height="11" fill="none" stroke="#9aa6b2" stroke-width="2"/></g>
+    <path d="M1252 11 l11 11 M1263 11 l-11 11" stroke="#9aa6b2" stroke-width="2"/>
+
+    <!-- header -->
+    <rect x="0" y="34" width="1280" height="74" fill="#16191f"/>
+    <line x1="0" y1="108" x2="1280" y2="108" stroke="#262a33" stroke-width="1"/>
+    <text x="20" y="78" font-size="15" class="cjk mut">我说</text>
+    <text x="66" y="78" font-size="15" font-weight="600" class="cjk pri">中文</text>
+    <text x="104" y="78" font-size="15" class="mut">→</text>
+    <!-- target chips -->
+    <g>
+      <rect x="130" y="60" width="92" height="26" rx="13" fill="#232a36"/>
+      <text x="144" y="78" font-size="13" font-weight="700" fill="#9b8cf0">JP</text>
+      <text x="170" y="78" font-size="13" class="cjk pri">日语</text>
+      <text x="204" y="78" font-size="13" class="fnt">×</text>
+    </g>
+    <g>
+      <rect x="230" y="60" width="92" height="26" rx="13" fill="#232a36"/>
+      <text x="244" y="78" font-size="13" font-weight="700" fill="#5cc8e0">KR</text>
+      <text x="270" y="78" font-size="13" class="cjk pri">韩语</text>
+      <text x="304" y="78" font-size="13" class="fnt">×</text>
+    </g>
+    <rect x="330" y="60" width="34" height="26" rx="13" fill="none" stroke="#3a414d" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <text x="343" y="79" font-size="17" class="mut" text-anchor="middle">+</text>
+    <!-- right cluster: overlay button, account, gear -->
+    <g>
+      <rect x="926" y="58" width="172" height="30" rx="8" fill="#3b6ef5"/>
+      <rect x="944" y="67" width="14" height="11" rx="2" fill="none" stroke="#ffffff" stroke-width="1.6"/>
+      <text x="968" y="77" font-size="14" font-weight="600" class="cjk" fill="#ffffff">叠加到应用</text>
+    </g>
+    <g>
+      <rect x="1112" y="56" width="130" height="34" rx="17" fill="#1f242e"/>
+      <circle cx="1131" cy="73" r="12" fill="#3a4250"/>
+      <text x="1131" y="78" font-size="12" font-weight="700" class="cjk" fill="#cdd3db" text-anchor="middle">访</text>
+      <text x="1150" y="77" font-size="14" class="cjk pri">访客</text>
+      <text x="1196" y="77" font-size="11" class="cjk mut">本地</text>
+    </g>
+    <g transform="translate(1258,72)" stroke="#8a93a0" stroke-linecap="round">
+      <g stroke-width="3">
+        <line x1="0" y1="-6.5" x2="0" y2="-10.5"/>
+        <line x1="4.6" y1="-4.6" x2="7.42" y2="-7.42"/>
+        <line x1="6.5" y1="0" x2="10.5" y2="0"/>
+        <line x1="4.6" y1="4.6" x2="7.42" y2="7.42"/>
+        <line x1="0" y1="6.5" x2="0" y2="10.5"/>
+        <line x1="-4.6" y1="4.6" x2="-7.42" y2="7.42"/>
+        <line x1="-6.5" y1="0" x2="-10.5" y2="0"/>
+        <line x1="-4.6" y1="-4.6" x2="-7.42" y2="-7.42"/>
+      </g>
+      <circle cx="0" cy="0" r="6.5" fill="none" stroke-width="2.2"/>
+    </g>
+
+    <!-- overlay status bar -->
+    <rect x="0" y="108" width="1280" height="42" fill="#181b22"/>
+    <line x1="0" y1="150" x2="1280" y2="150" stroke="#262a33" stroke-width="1"/>
+    <text x="22" y="135" font-size="13" class="cjk mut">正在叠加</text>
+    <text x="82" y="135" font-size="13" font-weight="700" class="pri">Application.exe</text>
+    <text x="186" y="135" font-size="13" class="cjk mut">· F9 暂停</text>
+    <g>
+      <rect x="300" y="117" width="124" height="26" rx="6" fill="none" stroke="#2c313b"/>
+      <path d="M315 124 l9 6 -9 6 z" fill="#8a93a0"/>
+      <text x="332" y="135" font-size="13" class="cjk pri">识别文本</text>
+    </g>
+    <g>
+      <rect x="436" y="117" width="124" height="26" rx="6" fill="none" stroke="#2c313b"/>
+      <path d="M458 124 a7 7 0 1 0 6 -2" fill="none" stroke="#8a93a0" stroke-width="1.6"/>
+      <path d="M464 118 l1 5 -5 0 z" fill="#8a93a0"/>
+      <text x="474" y="135" font-size="13" class="cjk pri">切换窗口</text>
+    </g>
+    <g>
+      <rect x="572" y="117" width="74" height="26" rx="6" fill="none" stroke="#2c313b"/>
+      <rect x="586" y="125" width="9" height="9" fill="#8a93a0"/>
+      <text x="601" y="135" font-size="13" class="cjk pri">停止</text>
+    </g>
+
+    <!-- ================= conversation ================= -->
+    <!-- outgoing: Chinese, translated to JP + KO -->
+    <text x="1232" y="178" font-size="12" text-anchor="end"><tspan font-weight="700" fill="#e0788f">中文</tspan><tspan class="cjk mut" dx="6">回复</tspan></text>
+    <rect x="752" y="190" width="504" height="216" rx="14" fill="#243248" stroke="#31435c" stroke-width="1"/>
+    <text x="1232" y="230" font-size="21" class="cjk pri" text-anchor="end">大家好，请多关照！</text>
+    <line x1="772" y1="250" x2="1236" y2="250" stroke="#31435c" stroke-width="1"/>
+    <text x="1232" y="278" font-size="12" text-anchor="end"><tspan font-weight="700" fill="#9b8cf0">JP</tspan><tspan class="cjk mut" dx="6">日语</tspan></text>
+    <text x="1232" y="312" font-size="24" class="cjk pri" text-anchor="end">皆さん、よろしくお願いします！</text>
+    <text x="1232" y="348" font-size="12" text-anchor="end"><tspan font-weight="700" fill="#5cc8e0">KR</tspan><tspan class="cjk mut" dx="6">韩语</tspan></text>
+    <text x="1232" y="382" font-size="24" class="cjk pri" text-anchor="end">여러분, 잘 부탁드립니다!</text>
+    <text x="1232" y="428" font-size="12" class="fnt" text-anchor="end">00:15:21</text>
+
+    <!-- incoming: Japanese, transcribed + translated to Chinese -->
+    <text x="24" y="466" font-size="12" text-anchor="start"><tspan font-weight="700" fill="#9b8cf0">JP</tspan><tspan class="cjk mut" dx="6">日语</tspan></text>
+    <rect x="24" y="476" width="470" height="92" rx="14" fill="#1e2330"/>
+    <text x="46" y="510" font-size="20" class="cjk" fill="#aeb6c2">はじめまして、よろしく！</text>
+    <text x="46" y="546" font-size="21" class="cjk pri">初次见面，请多关照！</text>
+    <text x="46" y="590" font-size="12" class="fnt">00:15:23</text>
+
+    <!-- incoming: Korean, transcribed + translated to Chinese -->
+    <text x="24" y="618" font-size="12" text-anchor="start"><tspan font-weight="700" fill="#5cc8e0">KR</tspan><tspan class="cjk mut" dx="6">韩语</tspan></text>
+    <rect x="24" y="628" width="470" height="92" rx="14" fill="#1e2330"/>
+    <text x="46" y="662" font-size="20" class="cjk" fill="#aeb6c2">만나서 반갑습니다.</text>
+    <text x="46" y="698" font-size="21" class="cjk pri">很高兴见到你。</text>
+
+    <!-- ================= bottom bar ================= -->
+    <rect x="0" y="738" width="1280" height="82" fill="#181b22"/>
+    <line x1="0" y1="738" x2="1280" y2="738" stroke="#262a33" stroke-width="1"/>
+    <!-- mic selector -->
+    <g stroke="#9aa6b2" stroke-width="1.6" fill="none">
+      <rect x="22" y="768" width="11" height="18" rx="5.5"/>
+      <path d="M18 782 a9.5 9.5 0 0 0 19 0"/>
+      <line x1="27.5" y1="791" x2="27.5" y2="798"/>
+    </g>
+    <rect x="48" y="764" width="160" height="34" rx="8" fill="#1f242e" stroke="#2c313b"/>
+    <text x="64" y="786" font-size="14" class="cjk pri">默认麦克风</text>
+    <path d="M188 779 l6 6 6 -6" stroke="#8a93a0" stroke-width="1.6" fill="none"/>
+    <rect x="216" y="778" width="44" height="6" rx="3" fill="#2a3140"/>
+    <rect x="216" y="778" width="26" height="6" rx="3" fill="#33dd57"/>
+    <!-- output selector -->
+    <g stroke="#9aa6b2" stroke-width="1.6" fill="none">
+      <path d="M274 784 v-6 a12 12 0 0 1 24 0 v6"/>
+      <rect x="272" y="783" width="8" height="14" rx="3"/>
+      <rect x="292" y="783" width="8" height="14" rx="3"/>
+    </g>
+    <rect x="312" y="764" width="116" height="34" rx="8" fill="#1f242e" stroke="#2c313b"/>
+    <text x="328" y="786" font-size="14" class="cjk pri">耳机</text>
+    <path d="M408 779 l6 6 6 -6" stroke="#8a93a0" stroke-width="1.6" fill="none"/>
+    <rect x="440" y="778" width="44" height="6" rx="3" fill="#2a3140"/>
+    <rect x="440" y="778" width="14" height="6" rx="3" fill="#33dd57"/>
+    <!-- reply input -->
+    <rect x="500" y="762" width="568" height="38" rx="10" fill="#1c2129" stroke="#2c313b"/>
+    <text x="516" y="786" font-size="14" class="cjk fnt">输入回复…（或直接说话——麦克风已开启）</text>
+    <!-- stop + status -->
+    <rect x="1084" y="762" width="86" height="38" rx="9" fill="#c0453f"/>
+    <text x="1127" y="786" font-size="14" font-weight="600" class="cjk" fill="#ffffff" text-anchor="middle">停止</text>
+    <circle cx="1190" cy="781" r="5" fill="#33dd57"/>
+    <text x="1256" y="786" font-size="14" class="cjk" fill="#cfd5dd" text-anchor="end">转写中…</text>
+
+    <rect x="0.5" y="0.5" width="1279" height="819" rx="14" fill="none" stroke="#000000" stroke-opacity="0.4"/>
+  </g>
+</svg>

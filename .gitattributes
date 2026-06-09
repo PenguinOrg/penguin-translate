@@ -1,0 +1,23 @@
+# Unix-compatible line endings: text is stored and checked out as LF on every
+# platform, so the repo is canonical regardless of each contributor's core.autocrlf.
+* text=auto eol=lf
+
+# Windows-only scripts that genuinely require CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary assets — never normalize or diff as text.
+*.exe binary
+*.dll binary
+*.lib binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.icns binary
+*.bin binary
+*.wav binary
+*.mp3 binary
+*.ttf binary
+*.otf binary
+*.gz  binary
+*.zip binary

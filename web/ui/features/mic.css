@@ -1,0 +1,71 @@
+.view-mic { background: radial-gradient(1100px 700px at 70% -40%, var(--surface-3) 0, var(--bg) 60%); }
+.view-mic .mic-stage { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column;
+  gap: 12px; padding: 12px clamp(12px, 2.5vw, 24px); overflow: hidden; }
+
+.view-mic .mic-card { flex: 1 1 auto; min-height: 0; max-width: min(980px, 100%); width: 100%; margin: 0 auto;
+  border: 1px solid var(--border); border-radius: 16px; background: var(--surface);
+  padding: clamp(14px, 2.2vh, 22px); display: flex; flex-direction: column; gap: clamp(10px, 1.6vh, 14px);
+  overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
+.view-mic .mini { font-size: 13px; color: var(--muted); flex-shrink: 0; }
+.view-mic .en-input-wrap { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+.view-mic .en-input { width: 100%; min-height: 52px; max-height: min(120px, 22vh); resize: vertical;
+  border: 1px solid var(--border); background: var(--surface); border-radius: 12px; padding: 10px;
+  font-size: 14px; color: var(--text); line-height: 1.4; }
+.view-mic .en-input::placeholder { color: var(--faint); }
+.view-mic .en-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+
+.view-mic .jp-section { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+.view-mic .jp-scroll { flex: 1 1 0; min-height: 0; overflow: auto; overscroll-behavior: contain;
+  padding: 8px 10px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); }
+.view-mic .big-jp { font-size: clamp(22px, 2.9vw, 34px); line-height: 1.55; text-align: center; display: block;
+  word-break: normal; overflow-wrap: anywhere; line-break: strict;
+  font-family: "Yu Gothic UI", "Meiryo", "Hiragino Sans", "MS Gothic", system-ui, sans-serif; }
+.view-mic .big-jp.lang-zh { font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", "Source Han Sans SC", system-ui, sans-serif; }
+.view-mic .big-jp.lang-ko { font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif; }
+.view-mic .big-jp.jp-placeholder { font-size: clamp(13px, 1.9vw, 15px); line-height: 1.45; color: var(--muted);
+  font-family: var(--font); max-width: 42em; margin: 0 auto; }
+.view-mic .big-jp.hide-rt rt { visibility: hidden; }
+.view-mic ruby rt { font-size: .42em; color: var(--muted); user-select: none; }
+.view-mic .jp-actions { flex-shrink: 0; display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; padding: 4px 0 6px; }
+.view-mic .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.view-mic .row button { border: 1px solid var(--border); background: var(--surface-2); border-radius: 8px; padding: 8px 10px; }
+.view-mic .row button.warn { background: #4e3820; border-color: #91673b; }
+.view-mic .row button:disabled { opacity: .45; cursor: not-allowed; }
+
+.view-mic .score-chip { flex-shrink: 0; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums;
+  padding: 4px 11px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text); line-height: 1.25; }
+.view-mic .score-chip.ok { color: #9df0c0; border-color: #35784f; background: #152018; }
+.view-mic .score-chip.bad { color: #f0c49a; border-color: #7a5c36; background: #1f1710; }
+
+.view-mic .card-footer { flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; margin-top: 2px; }
+.view-mic .back-en, .view-mic .spoken-ja { width: 100%; border: 1px solid var(--border); background: var(--surface);
+  border-radius: 12px; padding: 10px; min-height: 44px; max-height: min(120px, 26vh); overflow-y: auto;
+  font-size: 14px; color: var(--text); white-space: pre-wrap; }
+.view-mic .spoken-ja .hit { display: inline; border-radius: 999px; box-decoration-break: clone; -webkit-box-decoration-break: clone;
+  background: linear-gradient(transparent 58%, rgba(56, 196, 107, 0.78) 58%, rgba(56, 196, 107, 0.78) 94%, transparent 94%); padding: 0 1px; }
+.view-mic .feedback-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 10px; }
+
+.view-mic .mic-bottom { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  max-width: min(980px, 100%); width: 100%; margin: 0 auto; }
+.view-mic .chips-track { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 8px; }
+.view-mic .attempt-summary { flex-shrink: 0; font-size: 11px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.view-mic .chips { display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden; flex-wrap: nowrap; flex: 1 1 0; min-width: 0; padding: 4px 2px; scrollbar-width: thin; }
+.view-mic .chip { width: 18px; height: 18px; border-radius: 999px; border: 1px solid var(--border-strong); background: transparent; flex: 0 0 auto; padding: 0; }
+.view-mic .chip.ok { background: #2f8d59; border-color: #4db87d; }
+.view-mic .chip.bad { border-color: #c98b3f; background: #51361d; }
+.view-mic .chip.current { box-shadow: 0 0 0 2px var(--accent-soft); }
+.view-mic .history-btn { border: 1px solid var(--border); background: var(--surface-2); border-radius: 999px; height: 22px; padding: 0 10px; font-size: 12px; flex-shrink: 0; }
+.view-mic .history-panel { position: absolute; right: 16px; bottom: 16px; width: min(560px, 94%); max-height: 54%; overflow: auto;
+  border: 1px solid var(--border); background: var(--surface); border-radius: 12px; padding: 10px; display: none; z-index: 30; }
+.view-mic .history-panel.show { display: block; }
+.view-mic .hist-item { border: 1px solid var(--border); border-radius: 10px; padding: 8px; margin-bottom: 8px; }
+.view-mic .hist-title { font-size: 13px; color: var(--muted); }
+.view-mic .attempt { font-size: 12px; color: var(--text); margin-top: 4px; display: flex; gap: 8px; align-items: center; }
+
+.runbar .mic-controls { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.runbar .mic-controls .lang-ctl { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); flex: 0 0 auto; }
+.runbar .mic-controls .lang-ctl-tag { white-space: nowrap; font-weight: 600; }
+.runbar .mic-controls select { max-width: 220px; }
+.runbar .mic-controls .mic-level { width: 64px; height: 10px; border-radius: 5px; background: var(--surface-2); border: 1px solid var(--border); overflow: hidden; flex-shrink: 0; }
+.runbar .mic-controls .mic-level-bar { display: block; height: 100%; width: 0%; background: var(--accent); transition: width 80ms linear, background-color 120ms linear; }
+.runbar .mic-controls .mic-level-bar.speech { background: var(--ok); }

@@ -1,0 +1,23 @@
+{
+  "openai_api_key": "",
+  "openai_base_url": "",
+  "openrouter_api_key": "",
+  "openrouter_base_url": "https://openrouter.ai/api/v1",
+  "practice": {
+    "forward_translator": "nllb",
+    "target_language": "jp",
+    "score_threshold": 100
+  },
+  "window": {
+    "translate_backend": "openrouter",
+    "nllb_base_url": "http://127.0.0.1:8745",
+    "poll_interval_ms": 1500,
+    "overlay_enabled": true,
+    "hotkey": "F9"
+  },
+  "audio": {
+    "api_provider": "openai",
+    "pipeline_mode": "split",
+    "primary_language": "ja"
+  }
+}

@@ -1,0 +1,109 @@
+name: Build Windows
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: build-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            runtime/overlay
+            runtime/denoise
+
+      - name: Rust tests (denoise)
+        shell: pwsh
+        run: |
+          cargo test --release --manifest-path runtime/denoise/Cargo.toml
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Go quality gates (gofmt, vet, test)
+        shell: pwsh
+        run: |
+          $bad = gofmt -l .
+          if ($bad) {
+            Write-Host "::error::gofmt required on the following files:"
+            $bad | ForEach-Object { Write-Host "  $_" }
+            exit 1
+          }
+          # CGO is gone (the OpenVR client moved to the Rust sidecar), so the
+          # build no longer needs MinGW. unsafeptr stays off: the remaining
+          # unsafe.Pointer use is Win32 OCR/syscall interop, by design.
+          $env:CGO_ENABLED = '0'
+          go vet -unsafeptr=false ./...
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          go test -count=1 ./...
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Write-Host "gofmt clean, vet clean, tests pass"
+
+      - name: Build release
+        shell: pwsh
+        run: ./build/scripts/build.ps1
+
+      - name: Verify build outputs
+        shell: pwsh
+        run: |
+          $main = 'build/penguin-translate.exe'
+          if (-not (Test-Path -LiteralPath $main)) {
+            throw "Missing $main"
+          }
+          $sizeMb = [math]::Round((Get-Item -LiteralPath $main).Length / 1MB, 2)
+          if ($sizeMb -lt 15) {
+            throw "Release exe looks too small ($sizeMb MB); desktop overlay may not be embedded"
+          }
+          Write-Host "Release exe: $main ($sizeMb MB, single self-contained binary)"
+
+      - name: Upload Windows binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: penguin-translate-windows-amd64
+          path: build/penguin-translate.exe
+          if-no-files-found: error
+
+  cross-build-linux:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Cross-platform build + vet (linux)
+        env:
+          CGO_ENABLED: '0'
+        run: |
+          go build ./...
+          go vet ./...

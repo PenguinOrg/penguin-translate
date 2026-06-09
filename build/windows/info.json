@@ -1,0 +1,15 @@
+{
+	"fixed": {
+		"file_version": "0.1.0.0"
+	},
+	"info": {
+		"0000": {
+			"ProductVersion": "0.1.0",
+			"CompanyName": "Penguin Translate",
+			"FileDescription": "Penguin Translate",
+			"LegalCopyright": "Copyright (c) 2026",
+			"ProductName": "Penguin Translate",
+			"Comments": "Mic translate, window OCR translate, and system-audio captions"
+		}
+	}
+}

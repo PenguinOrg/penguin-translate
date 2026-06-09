@@ -1,0 +1,21 @@
+[package]
+name = "penguin-translate-denoise"
+version = "0.1.0"
+edition = "2021"
+description = "RNNoise speech denoise sidecar for Penguin Translate (shared by live captions + mic translation)"
+
+[[bin]]
+name = "penguin-translate-denoise"
+path = "src/main.rs"
+
+[dependencies]
+# Pure-Rust RNNoise port — no C/MSVC link deps (unlike the overlay's OpenVR shim).
+# default-features=false drops nnnoiseless's own CLI (clap/dasp) — we only need DenoiseState.
+nnnoiseless = { version = "0.5", default-features = false }
+# WAV (RIFF) read/write for the stdin/stdout frame protocol.
+hound = "3.5"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

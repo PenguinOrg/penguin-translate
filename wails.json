@@ -1,0 +1,17 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "translation-overlay",
+  "outputfilename": "penguin-translate",
+  "frontend:install": "",
+  "frontend:build": "",
+  "author": {
+    "name": "Penguin Translate"
+  },
+  "info": {
+    "companyName": "Penguin Translate",
+    "productName": "Penguin Translate",
+    "productVersion": "0.1.0",
+    "copyright": "Copyright (c) 2026",
+    "comments": "Mic translate, window OCR translate, and system-audio captions"
+  }
+}
