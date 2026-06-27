@@ -81,9 +81,12 @@ func (h *Host) handleNativeTranscribeSegment(w http.ResponseWriter, r *http.Requ
 	trm := strings.TrimSpace(s.TranslateModel)
 	mm := strings.TrimSpace(s.MultimodalModel)
 	if tm == "" {
-		if provider == "openrouter" {
+		switch provider {
+		case "openrouter":
 			tm = "qwen/qwen3-asr-flash-2026-02-10"
-		} else {
+		case "dashscope":
+			tm = "qwen3-asr-flash"
+		default:
 			tm = "gpt-4o-mini-transcribe"
 		}
 	}
@@ -91,9 +94,12 @@ func (h *Host) handleNativeTranscribeSegment(w http.ResponseWriter, r *http.Requ
 		dm = "gpt-4o-transcribe-diarize"
 	}
 	if trm == "" {
-		if provider == "openrouter" {
+		switch provider {
+		case "openrouter":
 			trm = "google/gemini-2.0-flash-lite-001"
-		} else {
+		case "dashscope":
+			trm = "qwen-flash"
+		default:
 			trm = "gpt-4o-mini"
 		}
 	}
@@ -101,24 +107,39 @@ func (h *Host) handleNativeTranscribeSegment(w http.ResponseWriter, r *http.Requ
 		mm = "xiaomi/mimo-v2-flash"
 	}
 
+	var hintLangs []string
+	if lang != "" {
+		hintLangs = []string{lang}
+	} else if full, err := h.repo.Load(); err == nil && len(full.MicTranslate.OtherLanguages) > 0 {
+		hintLangs = full.MicTranslate.OtherLanguages
+	} else if s.PrimaryLanguage != "" {
+		hintLangs = []string{s.PrimaryLanguage}
+	}
+	captionContext := captionpkg.BuildCaptionContext(s.ContextEnabled, hintLangs, s.ContextHint)
+	translateContext := captionpkg.BuildTranslateContext(s.ContextEnabled, s.ContextHint)
+
 	req := captionpkg.SegmentRequest{
-		WAV:             wav,
-		WantDiarize:     formTruthy(r.MultipartForm.Value, "diarize"),
-		WantTranslate:   formTruthy(r.MultipartForm.Value, "translate_to_en"),
-		VROverlayOn:     s.OpenVROverlayEnabled,
-		Language:        lang,
-		Pipeline:        pipe,
-		Provider:        provider,
-		TranscribeModel: tm,
-		DiarizeModel:    dm,
-		TranslateModel:  trm,
-		MultimodalModel: mm,
-		Timeout:         timeout,
+		WAV:              wav,
+		WantDiarize:      formTruthy(r.MultipartForm.Value, "diarize"),
+		WantTranslate:    formTruthy(r.MultipartForm.Value, "translate_to_en"),
+		VROverlayOn:      s.OpenVROverlayEnabled,
+		Language:         lang,
+		Context:          captionContext,
+		TranslateContext: translateContext,
+		Pipeline:         pipe,
+		Provider:         provider,
+		TranscribeModel:  tm,
+		DiarizeModel:     dm,
+		TranslateModel:   trm,
+		MultimodalModel:  mm,
+		Timeout:          timeout,
 		Creds: cloudapi.Credentials{
 			OpenAIKey:      s.OpenAIAPIKey,
 			OpenAIBase:     s.OpenAIBaseURL,
 			OpenRouterKey:  s.OpenRouterAPIKey,
 			OpenRouterBase: s.OpenRouterBaseURL,
+			DashScopeKey:   s.DashScopeAPIKey,
+			DashScopeBase:  s.DashScopeBaseURL,
 			APIProvider:    provider,
 		},
 	}

@@ -117,6 +117,8 @@ export default {
   'prefs.ov.showVr': 'ヘッドセットに字幕を表示（VR）',
   'prefs.ov.panelWidth': 'パネル幅（m）',
   'prefs.ov.distance': '前方の距離（m）',
+  'prefs.ov.vrStatus': 'SteamVR',
+  'prefs.ov.vrStatusChecking': '確認中…',
 
   'prefs.int.intro': '話した／入力した返信を OSC 経由で VRChat のチャットボックスに送信します。各出力言語は独立した行になります。「元の行を含める」をオンにすると、話した内容が先頭に追加されます。',
   'prefs.int.legend': 'VRChat OSC チャットボックス',
@@ -130,6 +132,10 @@ export default {
   'prefs.int.testFailed': 'OSC テストに失敗しました',
   'prefs.int.testTitleOn': 'VRChat のチャットボックスにテスト行を送信',
   'prefs.int.testTitleOff': '先に VRChat OSC を有効にしてください',
+  'prefs.int.paceHint': '各行を読み切れる時間だけ表示してから次の行に切り替えます。続けて届いた行は上書きせず順番に表示されます。',
+  'prefs.int.paceSpeed': '読む速さ（文字／秒）',
+  'prefs.int.paceMin': '最短表示時間（秒）',
+  'prefs.int.paceMax': '最長表示時間（秒）',
 
   'prefs.diag.enginePhase': 'エンジンフェーズ: {phase}',
   'prefs.diag.latencyLegend': 'パイプライン遅延',

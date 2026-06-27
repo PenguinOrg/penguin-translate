@@ -7,10 +7,8 @@
   <link rel="stylesheet" href="/ui/shared/ui.css" />
   <script type="module" src="/ui/app.js"></script>
   <style>
-    /* ── shell layout: one column, fixed app bar + run bar, scrolling work area ── */
     body { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-    /* ── ONE application bar (replaces hub nav + the three per-iframe title bars) ── */
     .appbar {
       height: 46px; flex-shrink: 0; display: flex; align-items: center; gap: 14px;
       padding: 0 12px; background: var(--bg-raised); border-bottom: 1px solid var(--border); position: relative;
@@ -18,7 +16,6 @@
     .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; color: var(--text-bright); white-space: nowrap; }
     .brand .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
     .spacer { flex: 1; }
-    /* App-bar buttons: "Overlay an app" (enters the overlay utility) + account stub. */
     .ghost { display: flex; align-items: center; gap: 7px; background: transparent; border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font-size: 12.5px; color: var(--muted); }
     .ghost:hover { color: var(--text); border-color: var(--border-strong); }
     .ghost.active { background: var(--accent); border-color: var(--accent); color: #fff; }
@@ -28,8 +25,6 @@
     .gear { width: 32px; height: 32px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: var(--muted); font-size: 15px; line-height: 1; }
     .gear:hover { background: var(--surface-2); color: var(--text); border-color: var(--border-strong); }
 
-    /* ── languages live INLINE in the app bar (one line, no wasted vertical space):
-          "Speak EN → [JA ×][ZH ×][KO ×] [+]" — selections shown as abbreviations ── */
     .langbar-inline { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
     .langbar-inline .you { color: var(--muted); white-space: nowrap; }
     .langbar-inline .you b { color: var(--text); font-weight: 600; cursor: pointer; border-bottom: 1px dotted var(--border-strong); }
@@ -51,7 +46,6 @@
     .lmenu .li .ck.on { background: var(--accent); border-color: var(--accent); }
     .lmenu .li .ck.on::after { content: "✓"; color: #fff; font-size: 12px; position: absolute; left: 2px; top: -2px; }
 
-    /* ── ONE shared engine-readiness banner, owned by the shell → visible on EVERY view ── */
     .banner { flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 9px 16px;
               background: #231f17; border-bottom: 1px solid #5a4a2a; color: #f1dcae; font-size: 0.82rem; }
     .banner[hidden] { display: none; }
@@ -65,12 +59,10 @@
     .banner .act button { background: #2c2616; border-color: #5a4a2a; color: #f1dcae; font-size: 0.76rem; padding: 4px 10px; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── work area: the active feature view mounts here ── */
     .work { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; background: var(--bg); }
     .view { flex: 1; min-height: 0; display: none; flex-direction: column; }
     .view.active { display: flex; }
 
-    /* ── shared RunControl bar (same component for every feature) ── */
     .runbar { flex-shrink: 0; display: flex; align-items: center; gap: 10px; padding: 9px 14px;
               background: var(--bg-raised); border-top: 1px solid var(--border); }
     .runbar .controls { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; min-height: 30px; }
@@ -81,7 +73,6 @@
     .runbar .status .sdot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
     .runbar .status[data-running="true"] .sdot { background: var(--ok); }
 
-    /* ── shared toast channel: errors + recovery actions (replaces inline 'Error: '+msg) ── */
     .toast-host { position: fixed; right: 16px; bottom: 16px; display: flex; flex-direction: column; gap: 10px; z-index: 200; }
     .toast { width: 380px; display: flex; gap: 10px; align-items: flex-start;
              background: #24131a; border: 1px solid #6e3140; border-radius: 10px; padding: 12px 12px 12px 14px; box-shadow: 0 16px 40px #0007; }
@@ -97,10 +88,8 @@
     .toast .row button { font-size: 0.76rem; padding: 4px 10px; }
     .toast .x { color: #c98b95; background: none; border: none; font-size: 0.9rem; align-self: flex-start; }
 
-    /* ── Preferences host: categorized window (panes built in prefs.js) ── */
     .prefs-backdrop { position: fixed; inset: 0; background: rgba(4, 6, 10, 0.6); z-index: 150; display: flex; align-items: center; justify-content: center; padding: 16px; }
     .prefs-backdrop[hidden] { display: none; }
-    /* Fixed height + internal pane scroll → the panel no longer jumps size per category. */
     .prefs-panel { width: min(720px, 100%); height: min(620px, 88vh); background: var(--surface); border: 1px solid var(--border);
                    border-radius: var(--r-l); box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5); display: flex; flex-direction: column; overflow: hidden; }
     .prefs-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
@@ -431,6 +420,98 @@
           <template x-if="s.cat === 'capture'">
             <div>
               <p class="hint" x-text="$store.i18n.t('prefs.cap.intro')"></p>
+              <fieldset>
+                <legend x-text="$store.i18n.t('prefs.cap.engineLegend')"></legend>
+                <div class="field">
+                  <label x-text="$store.i18n.t('prefs.cap.preset')"></label>
+                  <select @change="s.setCaptionPreset($event.target.value)">
+                    <template x-for="o in s.captionPresetOpts" :key="o.v"><option :value="o.v" :selected="o.v === s.captionPresetValue" x-text="o.t"></option></template>
+                  </select>
+                  <p class="hint" x-text="$store.i18n.t('prefs.cap.presetHint')"></p>
+                </div>
+                <template x-if="(audio.api_provider || 'openrouter') === 'dashscope'">
+                  <div class="field">
+                    <label x-text="$store.i18n.t('prefs.cap.dashscopeKey')"></label>
+                    <div class="key-row">
+                      <input type="text" autocomplete="off" spellcheck="false" placeholder="sk-…" :value="settings.dashscope_api_key || ''" @change="s.save({ dashscope_api_key: $event.target.value.trim() })">
+                      <button class="key-remove" @click="s.removeKey('dashscope')" x-text="$store.i18n.t('common.remove')"></button>
+                    </div>
+                  </div>
+                </template>
+                <template x-if="(audio.api_provider || 'openrouter') === 'openrouter'">
+                  <div class="field">
+                    <label x-text="$store.i18n.t('prefs.inf.openrouterKey')"></label>
+                    <div class="key-row">
+                      <input type="text" autocomplete="off" spellcheck="false" placeholder="sk-or-…" :value="settings.openrouter_api_key || ''" @change="s.save({ openrouter_api_key: $event.target.value.trim() })">
+                      <button class="key-remove" @click="s.removeKey('openrouter')" x-text="$store.i18n.t('common.remove')"></button>
+                    </div>
+                  </div>
+                </template>
+                <template x-if="(audio.api_provider || 'openrouter') === 'openai'">
+                  <div class="field">
+                    <label x-text="$store.i18n.t('prefs.inf.openaiKey')"></label>
+                    <div class="key-row">
+                      <input type="text" autocomplete="off" spellcheck="false" placeholder="sk-…" :value="settings.openai_api_key || ''" @change="s.save({ openai_api_key: $event.target.value.trim() })">
+                      <button class="key-remove" @click="s.removeKey('openai')" x-text="$store.i18n.t('common.remove')"></button>
+                    </div>
+                  </div>
+                </template>
+                <label class="line"><input type="checkbox" :checked="audio.context_enabled" @change="s.saveAudio({ context_enabled: $event.target.checked })"> <span x-text="' ' + $store.i18n.t('prefs.cap.context')"></span></label>
+                <p class="hint" x-text="$store.i18n.t('prefs.cap.contextHint')"></p>
+                <template x-if="audio.context_enabled">
+                  <div class="field">
+                    <label x-text="$store.i18n.t('prefs.cap.contextNames')"></label>
+                    <input type="text" :value="audio.context_hint || ''" :placeholder="$store.i18n.t('prefs.cap.contextNamesPlaceholder')" @change="s.saveAudio({ context_hint: $event.target.value })">
+                  </div>
+                </template>
+                <template x-if="s.captionPresetValue === 'custom'">
+                  <div>
+                    <p class="hint" style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px" x-text="$store.i18n.t('prefs.cap.manualHint')"></p>
+                    <div class="field">
+                      <label x-text="$store.i18n.t('prefs.cap.provider')"></label>
+                      <select @change="s.setCaptionProvider($event.target.value)">
+                        <template x-for="o in s.captionProviderOpts" :key="o.v"><option :value="o.v" :selected="o.v === (audio.api_provider || 'openrouter')" x-text="o.t"></option></template>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label x-text="$store.i18n.t('prefs.inf.mode')"></label>
+                      <select @change="s.saveAudio({ pipeline_mode: $event.target.value })">
+                        <template x-for="o in s.pipelineOpts" :key="o.v"><option :value="o.v" :selected="o.v === (audio.pipeline_mode || 'split')" x-text="o.t"></option></template>
+                      </select>
+                    </div>
+                    <template x-if="(audio.pipeline_mode || 'split') === 'multimodal'">
+                      <div class="field">
+                        <label x-text="$store.i18n.t('prefs.cap.multimodal')"></label>
+                        <select @change="s.saveAudio({ multimodal_model: $event.target.value })">
+                          <template x-for="o in s.opts(s.MULTIMODAL, audio.multimodal_model)" :key="o.v"><option :value="o.v" :selected="o.v === (audio.multimodal_model || s.MULTIMODAL[0].v)" x-text="o.t"></option></template>
+                        </select>
+                      </div>
+                    </template>
+                    <template x-if="(audio.pipeline_mode || 'split') === 'split'">
+                      <div>
+                        <div class="field">
+                          <label x-text="$store.i18n.t('prefs.cap.asr')"></label>
+                          <select @change="s.saveAudio({ transcribe_model: $event.target.value })">
+                            <template x-for="o in s.opts(s.CAPTION_ASR, audio.transcribe_model)" :key="o.v"><option :value="o.v" :selected="o.v === (audio.transcribe_model || s.CAPTION_ASR[0].v)" x-text="o.t"></option></template>
+                          </select>
+                        </div>
+                        <div class="field">
+                          <label x-text="$store.i18n.t('prefs.cap.translate')"></label>
+                          <select @change="s.saveAudio({ translate_model: $event.target.value })">
+                            <template x-for="o in s.opts(s.CAPTION_TRANSLATE, audio.translate_model)" :key="o.v"><option :value="o.v" :selected="o.v === (audio.translate_model || s.CAPTION_TRANSLATE[0].v)" x-text="o.t"></option></template>
+                          </select>
+                        </div>
+                      </div>
+                    </template>
+                    <template x-if="(audio.api_provider || 'openrouter') === 'dashscope'">
+                      <div class="field">
+                        <label x-text="$store.i18n.t('prefs.cap.dashscopeBase')"></label>
+                        <input type="text" autocomplete="off" spellcheck="false" placeholder="https://dashscope-intl.aliyuncs.com/compatible-mode/v1" :value="settings.dashscope_base_url || ''" @change="s.save({ dashscope_base_url: $event.target.value.trim() })">
+                      </div>
+                    </template>
+                  </div>
+                </template>
+              </fieldset>
               <label class="line"><input type="checkbox" :checked="audio.diarize_by_default" @change="s.saveAudio({ diarize_by_default: $event.target.checked })"> <span x-text="' ' + $store.i18n.t('prefs.cap.diarize')"></span></label>
               <div class="field">
                 <label x-text="$store.i18n.t('prefs.cap.detect')"></label>
@@ -475,6 +556,10 @@
                 <label class="line"><input type="checkbox" :checked="audio.openvr_overlay_enabled" @change="s.toggleVrOverlay($event.target.checked)"> <span x-text="' ' + $store.i18n.t('prefs.ov.showVr')"></span></label>
                 <template x-if="s.advanced"><div class="field"><label x-text="$store.i18n.t('prefs.ov.panelWidth')"></label><input type="number" min="0.4" max="4" step="0.1" :value="audio.vr_overlay_width_m || 1.6" @change="s.saveAudio({ vr_overlay_width_m: Number($event.target.value) || 1.6 })"></div></template>
                 <template x-if="s.advanced"><div class="field"><label x-text="$store.i18n.t('prefs.ov.distance')"></label><input type="number" min="0.5" max="5" step="0.1" :value="audio.vr_overlay_distance_m || 1.8" @change="s.saveAudio({ vr_overlay_distance_m: Number($event.target.value) || 1.8 })"></div></template>
+                <template x-if="audio.openvr_overlay_enabled">
+                  <p class="hint" :style="'margin-top:6px;color:' + (s.vrStatus.ok ? 'var(--muted)' : 'var(--danger, #d66)')"
+                     x-text="(s.vrStatus.ok ? '✓ ' : '⚠ ') + $store.i18n.t('prefs.ov.vrStatus') + ': ' + (s.vrStatus.error || s.vrStatus.detail || $store.i18n.t('prefs.ov.vrStatusChecking'))"></p>
+                </template>
               </fieldset>
             </div>
           </template>
@@ -487,6 +572,10 @@
                 <label class="line"><input type="checkbox" :checked="osc.enabled" @change="osc.enabled = $event.target.checked; s.saveOsc()"> <span x-text="' ' + $store.i18n.t('prefs.int.enable')"></span></label>
                 <label class="line"><input type="checkbox" :checked="osc.include_original" @change="osc.include_original = $event.target.checked; s.saveOsc()"> <span x-text="' ' + $store.i18n.t('prefs.int.includeOriginal')"></span></label>
                 <label class="line"><input type="checkbox" :checked="osc.notification" @change="osc.notification = $event.target.checked; s.saveOsc()"> <span x-text="' ' + $store.i18n.t('prefs.int.notification')"></span></label>
+                <p class="hint" x-text="$store.i18n.t('prefs.int.paceHint')"></p>
+                <div class="field"><label x-text="$store.i18n.t('prefs.int.paceSpeed')"></label><input type="number" min="1" max="60" step="1" :value="osc.pace_cps" @change="osc.pace_cps = Number($event.target.value) || 15; s.saveOsc()"></div>
+                <div class="field"><label x-text="$store.i18n.t('prefs.int.paceMin')"></label><input type="number" min="0" max="30" step="0.5" :value="osc.pace_min_seconds" @change="osc.pace_min_seconds = Math.max(0, Number($event.target.value) || 0); s.saveOsc()"></div>
+                <div class="field"><label x-text="$store.i18n.t('prefs.int.paceMax')"></label><input type="number" min="1" max="60" step="0.5" :value="osc.pace_max_seconds" @change="osc.pace_max_seconds = Number($event.target.value) || 7; s.saveOsc()"></div>
                 <template x-if="s.advanced"><div class="field"><label x-text="$store.i18n.t('prefs.int.host')"></label><input type="text" autocomplete="off" spellcheck="false" :value="osc.host" @change="osc.host = $event.target.value.trim() || '127.0.0.1'; s.saveOsc()"></div></template>
                 <template x-if="s.advanced"><div class="field"><label x-text="$store.i18n.t('prefs.int.port')"></label><input type="number" min="1" max="65535" :value="osc.port" @change="osc.port = Number($event.target.value) || 9000; s.saveOsc()"></div></template>
                 <div class="field"><button :disabled="!osc.enabled" :title="osc.enabled ? $store.i18n.t('prefs.int.testTitleOn') : $store.i18n.t('prefs.int.testTitleOff')" @click="s.sendOscTest()" x-text="$store.i18n.t('prefs.int.sendTest')"></button></div>

@@ -15,6 +15,8 @@ type settingsFile struct {
 	OpenAIBaseURL     string `json:"openai_base_url"`
 	OpenRouterAPIKey  string `json:"openrouter_api_key"`
 	OpenRouterBaseURL string `json:"openrouter_base_url"`
+	DashScopeAPIKey   string `json:"dashscope_api_key"`
+	DashScopeBaseURL  string `json:"dashscope_base_url"`
 }
 
 func defaultSettingsFile() settingsFile {
@@ -110,11 +112,16 @@ func normalizeSettings(s settingsFile) settingsFile {
 	} else {
 		s.ChunkProfile = "sentence"
 	}
-	ap := strings.ToLower(strings.TrimSpace(s.APIProvider))
-	if ap == "openrouter" {
+	switch strings.ToLower(strings.TrimSpace(s.APIProvider)) {
+	case "openrouter":
 		s.APIProvider = "openrouter"
-	} else {
+	case "dashscope":
+		s.APIProvider = "dashscope"
+	default:
 		s.APIProvider = "openai"
+	}
+	if strings.TrimSpace(s.DashScopeBaseURL) == "" && s.APIProvider == "dashscope" {
+		s.DashScopeBaseURL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
 	}
 	pm := strings.ToLower(strings.TrimSpace(s.PipelineMode))
 	if pm == "multimodal" {
@@ -189,6 +196,9 @@ type settingsPublicJSON struct {
 	OpenRouterKeyConfigured    bool    `json:"openrouter_key_configured"`
 	OpenAIBaseURL              string  `json:"openai_base_url"`
 	OpenRouterBaseURL          string  `json:"openrouter_base_url"`
+	DashScopeAPIKey            string  `json:"dashscope_api_key"`
+	DashScopeKeyConfigured     bool    `json:"dashscope_key_configured"`
+	DashScopeBaseURL           string  `json:"dashscope_base_url"`
 	APIProvider                string  `json:"api_provider"`
 	PipelineMode               string  `json:"pipeline_mode"`
 	TranscribeModel            string  `json:"transcribe_model"`
@@ -198,6 +208,8 @@ type settingsPublicJSON struct {
 	DiarizeByDefault           bool    `json:"diarize_by_default"`
 	TranslateByDefault         bool    `json:"translate_by_default"`
 	PrimaryLanguage            string  `json:"primary_language"`
+	ContextEnabled             bool    `json:"context_enabled"`
+	ContextHint                string  `json:"context_hint"`
 	ChunkProfile               string  `json:"chunk_profile"`
 	DenoiseEnabled             bool    `json:"denoise_enabled"`
 	DenoiseDebug               bool    `json:"denoise_debug"`
@@ -232,6 +244,8 @@ type settingsPostJSON struct {
 	DiarizeByDefault           bool    `json:"diarize_by_default"`
 	TranslateByDefault         bool    `json:"translate_by_default"`
 	PrimaryLanguage            string  `json:"primary_language"`
+	ContextEnabled             bool    `json:"context_enabled"`
+	ContextHint                string  `json:"context_hint"`
 	ChunkProfile               string  `json:"chunk_profile"`
 	DenoiseEnabled             bool    `json:"denoise_enabled"`
 	DenoiseDebug               bool    `json:"denoise_debug"`
@@ -264,6 +278,9 @@ func toSettingsPublicJSON(s settingsFile) settingsPublicJSON {
 		OpenRouterKeyConfigured:    strings.TrimSpace(s.OpenRouterAPIKey) != "",
 		OpenAIBaseURL:              s.OpenAIBaseURL,
 		OpenRouterBaseURL:          s.OpenRouterBaseURL,
+		DashScopeAPIKey:            s.DashScopeAPIKey,
+		DashScopeKeyConfigured:     strings.TrimSpace(s.DashScopeAPIKey) != "",
+		DashScopeBaseURL:           s.DashScopeBaseURL,
 		APIProvider:                s.APIProvider,
 		PipelineMode:               s.PipelineMode,
 		TranscribeModel:            s.TranscribeModel,
@@ -273,6 +290,8 @@ func toSettingsPublicJSON(s settingsFile) settingsPublicJSON {
 		DiarizeByDefault:           s.DiarizeByDefault,
 		TranslateByDefault:         s.TranslateByDefault,
 		PrimaryLanguage:            s.PrimaryLanguage,
+		ContextEnabled:             s.ContextEnabled,
+		ContextHint:                s.ContextHint,
 		ChunkProfile:               s.ChunkProfile,
 		DenoiseEnabled:             s.DenoiseEnabled,
 		DenoiseDebug:               s.DenoiseDebug,
@@ -346,7 +365,7 @@ func SyncOverlayLayout(st domain.Settings) {
 
 func applyAudioPatch(next *settingsFile, in settingsPostJSON, body []byte) {
 	ap := strings.ToLower(strings.TrimSpace(in.APIProvider))
-	if bodyHasKey(body, "api_provider") && (ap == "openrouter" || ap == "openai") {
+	if bodyHasKey(body, "api_provider") && (ap == "openrouter" || ap == "openai" || ap == "dashscope") {
 		next.APIProvider = ap
 	}
 	pm := strings.ToLower(strings.TrimSpace(in.PipelineMode))
@@ -367,6 +386,12 @@ func applyAudioPatch(next *settingsFile, in settingsPostJSON, body []byte) {
 	}
 	if bodyHasKey(body, "primary_language") {
 		next.PrimaryLanguage = strings.TrimSpace(in.PrimaryLanguage)
+	}
+	if bodyHasKey(body, "context_enabled") {
+		next.ContextEnabled = in.ContextEnabled
+	}
+	if bodyHasKey(body, "context_hint") {
+		next.ContextHint = strings.TrimSpace(in.ContextHint)
 	}
 	cpf := strings.ToLower(strings.TrimSpace(in.ChunkProfile))
 	if cpf == "extended" || cpf == "sentence" {

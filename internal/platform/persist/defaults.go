@@ -25,6 +25,9 @@ func normalize(st *domain.Settings) {
 	if strings.TrimSpace(st.OpenRouterBaseURL) == "" {
 		st.OpenRouterBaseURL = "https://openrouter.ai/api/v1"
 	}
+	if strings.TrimSpace(st.DashScopeBaseURL) == "" {
+		st.DashScopeBaseURL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+	}
 	sanitizeModelStrings(st)
 }
 

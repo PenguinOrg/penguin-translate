@@ -18,8 +18,11 @@ func settingsResponse(app *composition.App, st domain.Settings) map[string]any {
 		"openrouter_api_key":        st.OpenRouterAPIKey,
 		"openai_key_configured":     strings.TrimSpace(st.OpenAIAPIKey) != "",
 		"openrouter_key_configured": strings.TrimSpace(st.OpenRouterAPIKey) != "",
+		"dashscope_api_key":         st.DashScopeAPIKey,
+		"dashscope_key_configured":  strings.TrimSpace(st.DashScopeAPIKey) != "",
 		"openai_base_url":           st.OpenAIBaseURL,
 		"openrouter_base_url":       st.OpenRouterBaseURL,
+		"dashscope_base_url":        st.DashScopeBaseURL,
 		"skip_words":                append([]string{}, st.Window.SkipWords...),
 		"practice":                  app.MicTranslate.PublicSettings(st),
 		"audio":                     audiohost.PublicSettings(st),
@@ -33,6 +36,9 @@ type unifiedSettingsPost struct {
 	OpenRouterAPIKey    string          `json:"openrouter_api_key"`
 	RemoveOpenRouterKey bool            `json:"remove_openrouter_key"`
 	OpenRouterBaseURL   string          `json:"openrouter_base_url"`
+	DashScopeAPIKey     string          `json:"dashscope_api_key"`
+	RemoveDashScopeKey  bool            `json:"remove_dashscope_key"`
+	DashScopeBaseURL    string          `json:"dashscope_base_url"`
 	SkipWords           []string        `json:"skip_words"`
 	Practice            json.RawMessage `json:"practice"`
 	Audio               json.RawMessage `json:"audio"`
@@ -79,11 +85,19 @@ func handleSettings(app *composition.App) http.HandlerFunc {
 			} else if k := strings.TrimSpace(in.OpenRouterAPIKey); k != "" {
 				st.OpenRouterAPIKey = k
 			}
+			if in.RemoveDashScopeKey {
+				st.DashScopeAPIKey = ""
+			} else if k := strings.TrimSpace(in.DashScopeAPIKey); k != "" {
+				st.DashScopeAPIKey = k
+			}
 			if bodyHasTopKey(body, "openai_base_url") {
 				st.OpenAIBaseURL = strings.TrimSpace(in.OpenAIBaseURL)
 			}
 			if bodyHasTopKey(body, "openrouter_base_url") {
 				st.OpenRouterBaseURL = strings.TrimSpace(in.OpenRouterBaseURL)
+			}
+			if bodyHasTopKey(body, "dashscope_base_url") {
+				st.DashScopeBaseURL = strings.TrimSpace(in.DashScopeBaseURL)
 			}
 			if in.SkipWords != nil {
 				st.Window.SkipWords = normalizeSkipWords(in.SkipWords)

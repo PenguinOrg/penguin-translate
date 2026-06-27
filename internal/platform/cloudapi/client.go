@@ -17,8 +17,12 @@ type Credentials struct {
 	OpenAIBase     string
 	OpenRouterKey  string
 	OpenRouterBase string
+	DashScopeKey   string
+	DashScopeBase  string
 	APIProvider    string
 }
+
+const dashScopeDefaultBase = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
 
 func (c Credentials) resolve() (key, base, provider string, err error) {
 	p := strings.ToLower(strings.TrimSpace(c.APIProvider))
@@ -36,6 +40,16 @@ func (c Credentials) resolve() (key, base, provider string, err error) {
 			return "", "", "", fmt.Errorf("OpenAI API key required")
 		}
 		return key, strings.TrimRight(base, "/"), "openai", nil
+	case "dashscope":
+		key = strings.TrimSpace(c.DashScopeKey)
+		base = strings.TrimSpace(c.DashScopeBase)
+		if base == "" {
+			base = dashScopeDefaultBase
+		}
+		if key == "" {
+			return "", "", "", fmt.Errorf("DashScope API key required")
+		}
+		return key, strings.TrimRight(base, "/"), "dashscope", nil
 	default:
 		key = strings.TrimSpace(c.OpenRouterKey)
 		base = strings.TrimSpace(c.OpenRouterBase)
@@ -210,7 +224,10 @@ func OpenAITranscribeWAV(creds Credentials, model, language string, wav []byte) 
 		_ = mw.WriteField("response_format", "json")
 	}
 	if lang := strings.TrimSpace(language); len(lang) >= 2 {
-		_ = mw.WriteField("language", lang[:16])
+		if len(lang) > 16 {
+			lang = lang[:16]
+		}
+		_ = mw.WriteField("language", lang)
 	}
 	fw, _ := mw.CreateFormFile("file", "clip.wav")
 	_, _ = fw.Write(wav)

@@ -117,6 +117,8 @@ export default {
   'prefs.ov.showVr': '在头显中显示字幕（VR）',
   'prefs.ov.panelWidth': '面板宽度（m）',
   'prefs.ov.distance': '前方距离（m）',
+  'prefs.ov.vrStatus': 'SteamVR',
+  'prefs.ov.vrStatusChecking': '检查中…',
 
   'prefs.int.intro': '通过 OSC 将你说出／输入的回复发送到 VRChat 聊天框。每种输出语言各占一行；开启“包含原文行”可在前面加上你说的话。',
   'prefs.int.legend': 'VRChat OSC 聊天框',
@@ -130,6 +132,10 @@ export default {
   'prefs.int.testFailed': 'OSC 测试失败',
   'prefs.int.testTitleOn': '向 VRChat 聊天框发送测试行',
   'prefs.int.testTitleOff': '请先启用 VRChat OSC',
+  'prefs.int.paceHint': '让每一行在屏幕上停留足够阅读的时间，再被下一行替换。连续涌入的多行会依次排队，而不会互相覆盖。',
+  'prefs.int.paceSpeed': '阅读速度（字符／秒）',
+  'prefs.int.paceMin': '最短停留时间（秒）',
+  'prefs.int.paceMax': '最长停留时间（秒）',
 
   'prefs.diag.enginePhase': '引擎阶段：{phase}',
   'prefs.diag.latencyLegend': '流水线延迟',

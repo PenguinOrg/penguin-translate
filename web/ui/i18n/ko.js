@@ -117,6 +117,8 @@ export default {
   'prefs.ov.showVr': '헤드셋에 자막 표시(VR)',
   'prefs.ov.panelWidth': '패널 너비(m)',
   'prefs.ov.distance': '앞쪽 거리(m)',
+  'prefs.ov.vrStatus': 'SteamVR',
+  'prefs.ov.vrStatusChecking': '확인 중…',
 
   'prefs.int.intro': '말하거나 입력한 답장을 OSC를 통해 VRChat 채팅창으로 보냅니다. 각 출력 언어는 별도의 줄에 표시됩니다. "원본 줄 포함"을 켜면 말한 내용이 앞에 추가됩니다.',
   'prefs.int.legend': 'VRChat OSC 채팅창',
@@ -130,6 +132,10 @@ export default {
   'prefs.int.testFailed': 'OSC 테스트 실패',
   'prefs.int.testTitleOn': 'VRChat 채팅창에 테스트 줄 보내기',
   'prefs.int.testTitleOff': '먼저 VRChat OSC를 사용 설정하세요',
+  'prefs.int.paceHint': '다음 줄로 바뀌기 전에 각 줄이 읽을 수 있을 만큼 화면에 머무릅니다. 한꺼번에 도착한 줄은 서로 덮어쓰지 않고 차례로 표시됩니다.',
+  'prefs.int.paceSpeed': '읽기 속도(글자/초)',
+  'prefs.int.paceMin': '최소 표시 시간(초)',
+  'prefs.int.paceMax': '최대 표시 시간(초)',
 
   'prefs.diag.enginePhase': '엔진 단계: {phase}',
   'prefs.diag.latencyLegend': '파이프라인 지연',

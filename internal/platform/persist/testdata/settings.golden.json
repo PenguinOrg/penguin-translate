@@ -3,6 +3,8 @@
   "openai_base_url": "",
   "openrouter_api_key": "",
   "openrouter_base_url": "https://openrouter.ai/api/v1",
+  "dashscope_api_key": "",
+  "dashscope_base_url": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
   "practice": {
     "forward_translator": "openai",
     "openai_forward_model": "gpt-4o-mini",
@@ -75,6 +77,8 @@
     "diarize_by_default": false,
     "translate_by_default": false,
     "primary_language": "ja",
+    "context_enabled": false,
+    "context_hint": "",
     "chunk_profile": "sentence",
     "denoise_enabled": true,
     "denoise_debug": false,

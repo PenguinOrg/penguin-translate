@@ -7,6 +7,8 @@ type Settings struct {
 	OpenAIBaseURL     string               `json:"openai_base_url"`
 	OpenRouterAPIKey  string               `json:"openrouter_api_key"`
 	OpenRouterBaseURL string               `json:"openrouter_base_url"`
+	DashScopeAPIKey   string               `json:"dashscope_api_key"`
+	DashScopeBaseURL  string               `json:"dashscope_base_url"`
 	MicTranslate      MicTranslateSettings `json:"practice"`
 	Window            WindowSettings       `json:"window"`
 	Audio             AudioSettings        `json:"audio"`
@@ -84,6 +86,8 @@ type AudioSettings struct {
 	DiarizeByDefault           bool    `json:"diarize_by_default"`
 	TranslateByDefault         bool    `json:"translate_by_default"`
 	PrimaryLanguage            string  `json:"primary_language"`
+	ContextEnabled             bool    `json:"context_enabled"`
+	ContextHint                string  `json:"context_hint"`
 	ChunkProfile               string  `json:"chunk_profile"`
 	DenoiseEnabled             bool    `json:"denoise_enabled"`
 	DenoiseDebug               bool    `json:"denoise_debug"`
@@ -112,6 +116,7 @@ func DefaultSettings(engineBaseURL string) Settings {
 	return Settings{
 		OpenAIBaseURL:     "",
 		OpenRouterBaseURL: "https://openrouter.ai/api/v1",
+		DashScopeBaseURL:  "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
 		MicTranslate: MicTranslateSettings{
 			ForwardTranslator:         "openai",
 			OpenAIForwardModel:        "gpt-4o-mini",

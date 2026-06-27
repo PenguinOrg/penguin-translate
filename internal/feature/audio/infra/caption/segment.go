@@ -12,19 +12,21 @@ import (
 var transcribeSem sync.Mutex
 
 type SegmentRequest struct {
-	WAV             []byte
-	WantDiarize     bool
-	WantTranslate   bool
-	VROverlayOn     bool
-	Language        string
-	Pipeline        string
-	Provider        string
-	TranscribeModel string
-	DiarizeModel    string
-	TranslateModel  string
-	MultimodalModel string
-	Timeout         time.Duration
-	Creds           cloudapi.Credentials
+	WAV              []byte
+	WantDiarize      bool
+	WantTranslate    bool
+	VROverlayOn      bool
+	Language         string
+	Context          string
+	TranslateContext string
+	Pipeline         string
+	Provider         string
+	TranscribeModel  string
+	DiarizeModel     string
+	TranslateModel   string
+	MultimodalModel  string
+	Timeout          time.Duration
+	Creds            cloudapi.Credentials
 }
 
 type Segment struct {
@@ -78,7 +80,7 @@ func transcribeMultimodal(req SegmentRequest) (SegmentResponse, error) {
 	}
 	tMultimodal := time.Now()
 	text, english, detLang, err := cloudapi.MultimodalCaptionWAV(
-		req.Creds, req.MultimodalModel, req.Language, req.WAV, req.WantTranslate, req.Timeout,
+		req.Creds, req.MultimodalModel, req.Language, withRecentTranscript(req.Context), req.WAV, req.WantTranslate, req.Timeout,
 	)
 	multimodalUS := time.Since(tMultimodal).Microseconds()
 	if err != nil {
@@ -97,6 +99,9 @@ func transcribeMultimodal(req SegmentRequest) (SegmentResponse, error) {
 	if LanguageHintMismatch(text, req.Language) {
 		return emptyResponse(false, model, req.Language, "multimodal", "language_mismatch"), nil
 	}
+	if LanguageHintMismatch(text, detLang) {
+		return emptyResponse(false, model, detLang, "multimodal", "language_mismatch"), nil
+	}
 	enPreview := english
 	if !req.WantTranslate {
 		enPreview = ""
@@ -113,11 +118,19 @@ func transcribeMultimodal(req SegmentRequest) (SegmentResponse, error) {
 		English: StripLeadingPunctuation(english), Japanese: ex.Japanese, Romaji: ex.Romaji,
 		JPRomaji: ex.JPRomaji, ZhPinyin: ex.ZhPinyin, KoRoman: ex.KoRoman,
 	}
+	pushHistory(seg.Text, seg.English)
 	return SegmentResponse{
 		Diarized: false, Model: model, Language: detLang, Pipeline: "multimodal",
 		FullText: text, Segments: []Segment{seg},
 		TimingsUS: map[string]int64{"transcribe": multimodalUS, "translate": 0},
 	}, nil
+}
+
+func withRecentTranscript(base string) string {
+	if strings.TrimSpace(base) == "" {
+		return base
+	}
+	return strings.TrimSpace(base + recentSourceContext())
 }
 
 func transcribeSplit(req SegmentRequest) (SegmentResponse, error) {
@@ -132,9 +145,12 @@ func transcribeSplit(req SegmentRequest) (SegmentResponse, error) {
 	var rawSegs []map[string]any
 	var err error
 	tTranscribe := time.Now()
-	if req.Provider == "openrouter" {
+	switch req.Provider {
+	case "dashscope":
+		text, _, err = cloudapi.DashScopeTranscribeWAV(req.Creds, modelUse, req.Language, withRecentTranscript(req.Context), req.WAV, req.Timeout)
+	case "openrouter":
 		text, _, err = cloudapi.OpenRouterTranscribeWAV(req.Creds, modelUse, req.Language, req.WAV)
-	} else {
+	default:
 		text, rawSegs, err = cloudapi.OpenAITranscribeDetailed(req.Creds, modelUse, req.Language, req.WAV, req.WantDiarize, req.Timeout)
 	}
 	transcribeUS := time.Since(tTranscribe).Microseconds()
@@ -163,8 +179,14 @@ func transcribeSplit(req SegmentRequest) (SegmentResponse, error) {
 	translations := make([]string, len(segs))
 	var translateUS int64
 	if req.WantTranslate && len(lines) > 0 {
+		transCtx := strings.TrimSpace(req.TranslateContext)
+		if transCtx != "" {
+			if pc := recentPairContext(); pc != "" {
+				transCtx += " Recent dialogue and its translations: " + pc
+			}
+		}
 		tTranslate := time.Now()
-		translations, err = cloudapi.BatchTranslateToEN(req.Creds, req.TranslateModel, detLang, lines, req.Timeout)
+		translations, err = cloudapi.BatchTranslateToEN(req.Creds, req.TranslateModel, detLang, transCtx, lines, req.Timeout)
 		translateUS = time.Since(tTranslate).Microseconds()
 		if err != nil {
 			return SegmentResponse{}, err
@@ -191,6 +213,9 @@ func transcribeSplit(req SegmentRequest) (SegmentResponse, error) {
 	}
 	if len(out) == 0 {
 		return emptyResponse(req.WantDiarize, modelUse, req.Language, "split", "filler"), nil
+	}
+	for _, s := range out {
+		pushHistory(s.Text, s.English)
 	}
 	return SegmentResponse{
 		Diarized: req.WantDiarize, Model: modelUse, Language: detLang, Pipeline: "split",

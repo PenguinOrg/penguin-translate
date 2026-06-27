@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-func MultimodalCaptionWAV(creds Credentials, model, language string, wav []byte, wantTranslate bool, timeout time.Duration) (text, english, detectedLang string, err error) {
+func MultimodalCaptionWAV(creds Credentials, model, language, context string, wav []byte, wantTranslate bool, timeout time.Duration) (text, english, detectedLang string, err error) {
 	if len(wav) < 800 {
 		return "", "", language, nil
 	}
@@ -28,24 +28,38 @@ func MultimodalCaptionWAV(creds Credentials, model, language string, wav []byte,
 	if len(lang) >= 2 {
 		lang = lang[:2]
 	}
-	trNote := `"english" must be an empty string.`
+	trNote := `Set "english" to an empty string.`
 	if wantTranslate {
-		trNote = `Include "english" with a natural English translation.`
+		trNote = `Set "english" to a natural English translation of the speech.`
 	}
 	sysPrompt := fmt.Sprintf(
-		"You transcribe short speech audio. Focus on Chinese (zh), Japanese (ja), or English (en). Language hint: %s. %s Reply with ONLY JSON: {\"text\":\"…\",\"english\":\"…\",\"detected_lang\":\"zh|ja|en\"} — no markdown.",
+		"You are a speech transcription engine, not a chat assistant. Transcribe the spoken audio verbatim. "+
+			"Focus on Chinese (zh), Japanese (ja), or English (en). Language hint: %s. %s "+
+			"If the audio has no intelligible human speech (silence, noise, music, or a non-speech fragment), "+
+			"set \"speech\" to false and make \"text\" and \"english\" empty. "+
+			"Never reply, apologize, ask a question, or write any sentence addressed to a person. "+
+			"Output ONLY this JSON object and nothing else: "+
+			"{\"speech\":true|false,\"text\":\"…\",\"english\":\"…\",\"detected_lang\":\"zh|ja|en|other\"}",
 		lang, trNote,
 	)
 	b64 := base64.StdEncoding.EncodeToString(wav)
+	messages := []map[string]any{}
+	if ctx := strings.TrimSpace(context); ctx != "" {
+		messages = append(messages, map[string]any{
+			"role":    "system",
+			"content": []map[string]any{{"type": "text", "text": ctx}},
+		})
+	}
+	messages = append(messages, map[string]any{
+		"role": "user",
+		"content": []map[string]any{
+			{"type": "text", "text": sysPrompt},
+			{"type": "input_audio", "input_audio": map[string]string{"data": b64, "format": "wav"}},
+		},
+	})
 	body := map[string]any{
-		"model": strings.TrimSpace(model),
-		"messages": []map[string]any{{
-			"role": "user",
-			"content": []map[string]any{
-				{"type": "text", "text": sysPrompt},
-				{"type": "input_audio", "input_audio": map[string]string{"data": b64, "format": "wav"}},
-			},
-		}},
+		"model":       strings.TrimSpace(model),
+		"messages":    messages,
 		"temperature": 0.1,
 	}
 	raw, _ := json.Marshal(body)
@@ -72,6 +86,18 @@ func MultimodalCaptionWAV(creds Credentials, model, language string, wav []byte,
 	if err != nil {
 		return strings.TrimSpace(content), "", lang, nil
 	}
+	if v, ok := obj["speech"]; ok {
+		switch t := v.(type) {
+		case bool:
+			if !t {
+				return "", "", lang, nil
+			}
+		case string:
+			if strings.EqualFold(strings.TrimSpace(t), "false") {
+				return "", "", lang, nil
+			}
+		}
+	}
 	text = strings.TrimSpace(fmt.Sprint(obj["text"]))
 	english = strings.TrimSpace(fmt.Sprint(obj["english"]))
 	detectedLang = strings.TrimSpace(fmt.Sprint(obj["detected_lang"]))
@@ -82,6 +108,67 @@ func MultimodalCaptionWAV(creds Credentials, model, language string, wav []byte,
 		detectedLang = detectedLang[:2]
 	}
 	return text, english, detectedLang, nil
+}
+
+func DashScopeTranscribeWAV(creds Credentials, model, language, context string, wav []byte, timeout time.Duration) (text string, detected *string, err error) {
+	if len(wav) < 800 {
+		return "", nil, nil
+	}
+	key := strings.TrimSpace(creds.DashScopeKey)
+	base := strings.TrimSpace(creds.DashScopeBase)
+	if base == "" {
+		base = dashScopeDefaultBase
+	}
+	if key == "" {
+		return "", nil, fmt.Errorf("DashScope API key required for ASR")
+	}
+	base = strings.TrimRight(base, "/")
+	model = strings.TrimSpace(model)
+	if model == "" {
+		model = "qwen3-asr-flash"
+	}
+	b64 := base64.StdEncoding.EncodeToString(wav)
+	messages := []map[string]any{}
+	if ctx := strings.TrimSpace(context); ctx != "" {
+		messages = append(messages, map[string]any{
+			"role":    "system",
+			"content": []map[string]any{{"type": "text", "text": ctx}},
+		})
+	}
+	messages = append(messages, map[string]any{
+		"role": "user",
+		"content": []map[string]any{
+			{"type": "input_audio", "input_audio": map[string]string{
+				"data":   "data:audio/wav;base64," + b64,
+				"format": "wav",
+			}},
+		},
+	})
+	raw, _ := json.Marshal(map[string]any{"model": model, "messages": messages})
+	req, err := http.NewRequest(http.MethodPost, base+"/chat/completions", bytes.NewReader(raw))
+	if err != nil {
+		return "", nil, err
+	}
+	setHeaders(req, key, "dashscope")
+	cl := &http.Client{Timeout: timeout}
+	resp, err := cl.Do(req)
+	if err != nil {
+		return "", nil, err
+	}
+	defer resp.Body.Close()
+	b, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if resp.StatusCode >= 400 {
+		return "", nil, fmt.Errorf("DashScope STT HTTP %d: %s", resp.StatusCode, truncate(string(b), 2000))
+	}
+	content, err := chatContentFromResponse(b)
+	if err != nil {
+		return "", nil, err
+	}
+	if d := strings.TrimSpace(language); len(d) >= 2 {
+		dd := d[:2]
+		detected = &dd
+	}
+	return strings.TrimSpace(content), detected, nil
 }
 
 func OpenAITranscribeDetailed(creds Credentials, model, language string, wav []byte, diarize bool, timeout time.Duration) (text string, segments []map[string]any, err error) {
@@ -111,7 +198,10 @@ func OpenAITranscribeDetailed(creds Credentials, model, language string, wav []b
 		_ = mw.WriteField("response_format", "json")
 	}
 	if lang := strings.TrimSpace(language); len(lang) >= 2 {
-		_ = mw.WriteField("language", lang[:16])
+		if len(lang) > 16 {
+			lang = lang[:16]
+		}
+		_ = mw.WriteField("language", lang)
 	}
 	fw, _ := mw.CreateFormFile("file", "clip.wav")
 	_, _ = fw.Write(wav)
@@ -147,7 +237,7 @@ func OpenAITranscribeDetailed(creds Credentials, model, language string, wav []b
 	return text, segments, nil
 }
 
-func BatchTranslateToEN(creds Credentials, model, sourceLang string, lines []string, timeout time.Duration) ([]string, error) {
+func BatchTranslateToEN(creds Credentials, model, sourceLang, extraContext string, lines []string, timeout time.Duration) ([]string, error) {
 	cleaned := make([]string, len(lines))
 	copy(cleaned, lines)
 	if !anyNonEmpty(cleaned) {
@@ -174,6 +264,9 @@ func BatchTranslateToEN(creds Credentials, model, sourceLang string, lines []str
 		"You translate %s lines to natural English. Input is JSON [{\"i\":number,\"t\":string}]. Output ONLY a JSON array [{\"i\":number,\"en\":string}] in the same order. Escape double quotes inside en strings. No markdown, no commentary.",
 		langName,
 	)
+	if c := strings.TrimSpace(extraContext); c != "" {
+		sys += " Background context — proper nouns, VR/gaming vocabulary, and recent dialogue. Do NOT translate this; use it only to keep names, terms, and tone consistent: " + c
+	}
 	raw, err := ChatCompletion(creds, model, sys, string(rawPayload), 0.1)
 	if err != nil {
 		return nil, err

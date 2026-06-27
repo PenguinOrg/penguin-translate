@@ -1,5 +1,3 @@
-// Canonical key set: every UI key MUST exist here; other locales may omit keys
-// and fall back to these.
 export default {
   'common.close': 'Close',
   'common.dismiss': 'Dismiss',
@@ -125,6 +123,24 @@ export default {
   'prefs.inf.loadFailed': 'Model load failed',
 
   'prefs.cap.intro': 'Tuning for the live capture lanes (microphone + system audio) in the conversation.',
+  'prefs.cap.engineLegend': 'Caption engine',
+  'prefs.cap.preset': 'Engine preset',
+  'prefs.cap.presetHint': 'One pick sets the provider, models, and context biasing together. Enter the matching API key below, or choose Custom to mix your own.',
+  'prefs.cap.presetCustom': 'Custom — pick provider & models yourself',
+  'prefs.cap.presetGptAudioMini': 'GPT Audio mini — fast & accurate (recommended)',
+  'prefs.cap.presetGeminiFlashLite': 'Gemini 2.5 Flash Lite — cheapest',
+  'prefs.cap.presetDashscope': 'DashScope Qwen3-ASR — best proper nouns',
+  'prefs.cap.manualHint': 'Custom — any provider/model combination is allowed; mismatches are on you.',
+  'prefs.cap.multimodal': 'Caption model (transcribe + translate)',
+  'prefs.cap.provider': 'Provider',
+  'prefs.cap.asr': 'Speech recognition model',
+  'prefs.cap.translate': 'Translation model',
+  'prefs.cap.dashscopeKey': 'DashScope (Alibaba) key',
+  'prefs.cap.dashscopeBase': 'DashScope base URL',
+  'prefs.cap.context': 'Context biasing (VR/gaming vocabulary + names)',
+  'prefs.cap.contextHint': 'Sends a vocabulary hint to the recognizer so proper nouns and jargon transcribe correctly. Effective with DashScope Qwen ASR and multimodal models; the OpenRouter transcription endpoint ignores it.',
+  'prefs.cap.contextNames': 'Names & terms (comma-separated)',
+  'prefs.cap.contextNamesPlaceholder': 'e.g. Kanade, Poteto, mirror world',
   'prefs.cap.diarize': 'Speaker diarization (system audio, OpenAI split only)',
   'prefs.cap.detect': 'Speech detection',
   'prefs.cap.detectHint': 'How the capture lanes decide what is speech. Silero is a neural voice detector that rejects keyboard taps, clicks and system-audio noise regardless of loudness. Streaming runs it continuously so it drives capture and catches quiet speech (a few % CPU); filter only vets clips the energy gate already cut (~0% idle); RMS only is pure energy (lightest, but taps can reach the API).',
@@ -154,6 +170,8 @@ export default {
   'prefs.ov.showVr': 'Show captions in headset (VR)',
   'prefs.ov.panelWidth': 'Panel width (m)',
   'prefs.ov.distance': 'Distance in front (m)',
+  'prefs.ov.vrStatus': 'SteamVR',
+  'prefs.ov.vrStatusChecking': 'checking…',
 
   'prefs.int.intro': 'Send your spoken/typed replies to the VRChat chatbox over OSC. Each output language goes on its own line; turn on “include your original line” to prepend what you said.',
   'prefs.int.legend': 'VRChat OSC chatbox',
@@ -167,6 +185,10 @@ export default {
   'prefs.int.testFailed': 'OSC test failed',
   'prefs.int.testTitleOn': 'Send a test line to the VRChat chatbox',
   'prefs.int.testTitleOff': 'Enable VRChat OSC first',
+  'prefs.int.paceHint': 'Hold each line on screen long enough to read before the next replaces it. Lines that arrive in a burst wait their turn instead of overwriting each other.',
+  'prefs.int.paceSpeed': 'Reading speed (characters/sec)',
+  'prefs.int.paceMin': 'Minimum time on screen (sec)',
+  'prefs.int.paceMax': 'Maximum time on screen (sec)',
 
   'prefs.diag.enginePhase': 'Engine phase: {phase}',
   'prefs.diag.latencyLegend': 'Pipeline latency',
