@@ -2,6 +2,7 @@ package caption
 
 import (
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/mozillazg/go-pinyin"
@@ -88,10 +89,14 @@ func enrichChinese(text string) Enrichment {
 	args.Style = pinyin.Tone
 	py := pinyin.Pinyin(text, args)
 	var pairs []RubyPair
-	for i, r := range text {
+	pi := 0
+	for _, r := range text {
 		ro := ""
-		if i < len(py) && len(py[i]) > 0 {
-			ro = py[i][0]
+		if unicode.Is(unicode.Han, r) {
+			if pi < len(py) && len(py[pi]) > 0 {
+				ro = py[pi][0]
+			}
+			pi++
 		}
 		pairs = append(pairs, RubyPair{JP: string(r), Ro: ro})
 	}

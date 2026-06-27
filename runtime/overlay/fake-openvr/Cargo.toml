@@ -1,0 +1,12 @@
+[package]
+name = "fake-openvr"
+version = "0.1.0"
+edition = "2021"
+description = "Fake openvr_api.dll for headless CI — stands in for SteamVR so the overlay's real VR path can be exercised and asserted without a runtime or headset."
+
+[lib]
+name = "openvr_api"
+crate-type = ["cdylib"]
+
+[build-dependencies]
+cc = "1"

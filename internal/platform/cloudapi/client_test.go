@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func captureChat(t *testing.T) (creds Credentials, path *string, body *map[string]any, close func()) {
@@ -67,6 +68,50 @@ func TestChatCompletionWithBuildsBody(t *testing.T) {
 			t.Error("response_format must be omitted when unset")
 		}
 	})
+}
+
+func TestOpenAITranscribeWAVLanguageField(t *testing.T) {
+	var gotLang string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseMultipartForm(1 << 20)
+		gotLang = r.FormValue("language")
+		_, _ = io.WriteString(w, `{"text":"hello","language":"en"}`)
+	}))
+	defer srv.Close()
+	creds := Credentials{APIProvider: "openai", OpenAIKey: "k", OpenAIBase: srv.URL}
+	wav := make([]byte, 1000)
+
+	for _, lang := range []string{"en", "ja", "zh", "yue", "this-is-a-very-long-code"} {
+		text, _, err := OpenAITranscribeWAV(creds, "whisper-1", lang, wav)
+		if err != nil {
+			t.Fatalf("lang %q: %v", lang, err)
+		}
+		if text != "hello" {
+			t.Fatalf("lang %q: text = %q, want hello", lang, text)
+		}
+		if len(gotLang) > 16 {
+			t.Errorf("lang %q: server saw %q (>16 chars, not capped)", lang, gotLang)
+		}
+	}
+}
+
+func TestOpenAITranscribeDetailedLanguageField(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseMultipartForm(1 << 20)
+		_, _ = io.WriteString(w, `{"text":"hi"}`)
+	}))
+	defer srv.Close()
+	creds := Credentials{APIProvider: "openai", OpenAIKey: "k", OpenAIBase: srv.URL}
+	wav := make([]byte, 1000)
+	for _, lang := range []string{"en", "ja", "zh"} {
+		text, _, err := OpenAITranscribeDetailed(creds, "gpt-4o-mini-transcribe", lang, wav, false, time.Minute)
+		if err != nil {
+			t.Fatalf("lang %q: %v", lang, err)
+		}
+		if text != "hi" {
+			t.Fatalf("lang %q: text = %q, want hi", lang, text)
+		}
+	}
 }
 
 func TestChatCompletionWrapperUnchanged(t *testing.T) {

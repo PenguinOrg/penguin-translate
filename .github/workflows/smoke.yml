@@ -1,0 +1,122 @@
+name: Smoke
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      CGO_ENABLED: '0'
+      TO_OVERLAY_EXE: ${{ github.workspace }}\runtime\overlay\target\release\penguin-translate-overlay.exe
+      TO_FAKE_OPENVR_DLL: ${{ github.workspace }}\runtime\overlay\fake-openvr\target\release\openvr_api.dll
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build overlay sidecar (Rust)
+        shell: pwsh
+        run: cargo build --release --manifest-path runtime/overlay/Cargo.toml
+
+      - name: Test overlay sidecar (Rust)
+        shell: pwsh
+        run: cargo test --manifest-path runtime/overlay/Cargo.toml
+
+      - name: Build fake OpenVR runtime (Rust)
+        shell: pwsh
+        run: cargo build --release --manifest-path runtime/overlay/fake-openvr/Cargo.toml
+
+      - name: Build fake OneOCR runtime (Rust)
+        shell: pwsh
+        run: cargo build --release --manifest-path internal/feature/window/infra/ocr/testdata/fake-oneocr/Cargo.toml
+
+      - name: Build app (headless smoke target)
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path build | Out-Null
+          go build -o build/penguin-translate.exe ./cmd/app
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Run smoke
+        shell: pwsh
+        env:
+          TO_SMOKE_EXE: build/penguin-translate.exe
+          SMOKE_CI: '1'
+          E2E_ARTIFACT_DIR: e2e-artifacts
+        run: |
+          go test -tags smoke -v -timeout 15m ./internal/smoke 2>&1 | Tee-Object -FilePath smoke.log
+          exit $LASTEXITCODE
+
+      - name: Upload smoke log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: smoke-log
+          path: smoke.log
+          if-no-files-found: warn
+
+      - name: Run window-OCR pipeline tests
+        shell: pwsh
+        env:
+          TO_FAKE_ONEOCR_DLL: ${{ github.workspace }}\internal\feature\window\infra\ocr\testdata\fake-oneocr\target\release\oneocr.dll
+        run: |
+          go test -count=1 ./internal/feature/window/... 2>&1 | Tee-Object -FilePath window-ocr.log
+          exit $LASTEXITCODE
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Run user-flow E2E
+        shell: pwsh
+        env:
+          TO_SMOKE_EXE: build/penguin-translate.exe
+          E2E_ARTIFACT_DIR: e2e-artifacts
+        run: |
+          node internal/smoke/e2e/e2e.mjs 2>&1 | Tee-Object -FilePath e2e.log
+          exit $LASTEXITCODE
+
+      - name: Install virtual audio device (Scream)
+        id: audio_device
+        shell: pwsh
+        timeout-minutes: 6
+        run: ./build/scripts/ci-audio-device.ps1
+
+      - name: Run system-audio E2E
+        shell: pwsh
+        env:
+          TO_SMOKE_EXE: build/penguin-translate.exe
+          E2E_ARTIFACT_DIR: e2e-artifacts
+          EXPECT_AUDIO_DEVICE: ${{ steps.audio_device.outputs.installed }}
+        run: |
+          node internal/smoke/e2e/audio.mjs 2>&1 | Tee-Object -FilePath audio-e2e.log
+          exit $LASTEXITCODE
+
+      - name: Upload E2E artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-artifacts
+          path: |
+            e2e.log
+            audio-e2e.log
+            e2e-artifacts/
+          if-no-files-found: warn

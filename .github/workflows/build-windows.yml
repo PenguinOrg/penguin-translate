@@ -19,10 +19,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
           cache: true
@@ -52,9 +52,6 @@ jobs:
             $bad | ForEach-Object { Write-Host "  $_" }
             exit 1
           }
-          # CGO is gone (the OpenVR client moved to the Rust sidecar), so the
-          # build no longer needs MinGW. unsafeptr stays off: the remaining
-          # unsafe.Pointer use is Win32 OCR/syscall interop, by design.
           $env:CGO_ENABLED = '0'
           go vet -unsafeptr=false ./...
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -80,7 +77,7 @@ jobs:
           Write-Host "Release exe: $main ($sizeMb MB, single self-contained binary)"
 
       - name: Upload Windows binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: penguin-translate-windows-amd64
           path: build/penguin-translate.exe
@@ -93,10 +90,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
           cache: true

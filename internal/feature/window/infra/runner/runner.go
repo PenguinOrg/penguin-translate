@@ -50,7 +50,7 @@ type Runner struct {
 	repo port.SettingsRepository
 	cfg  domain.WindowSettings
 
-	engine  *ocr.Engine
+	engine  ocr.Recognizer
 	store   *cache.Store
 	tr      translate.Translator
 	display *overlay.Display
@@ -84,7 +84,7 @@ type Runner struct {
 	onUpdate func(Update)
 }
 
-func New(repo port.SettingsRepository, w domain.WindowSettings, engine *ocr.Engine, store *cache.Store, tr translate.Translator, target win.Window) *Runner {
+func New(repo port.SettingsRepository, w domain.WindowSettings, engine ocr.Recognizer, store *cache.Store, tr translate.Translator, target win.Window) *Runner {
 	translate.SetSkipWords(w.SkipWords)
 	return &Runner{
 		repo:   repo,

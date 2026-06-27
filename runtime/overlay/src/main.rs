@@ -325,11 +325,9 @@ impl FontSet {
     fn load() -> Option<Self> {
         let mut db = fontdb::Database::new();
         db.load_system_fonts();
-        let korean_bytes = load_font_bytes(
-            &db,
-            &["Malgun Gothic", "Malgun Gothic Semilight", "Gulim", "Dotum"],
-        )?;
-        let cjk_bytes = load_font_bytes(
+        let leak = |b: Vec<u8>| -> &'static [u8] { Box::leak(b.into_boxed_slice()) };
+        let latin_slice = leak(load_font_bytes(&db, &["Segoe UI", "Arial", "Tahoma"])?);
+        let cjk_slice = load_font_bytes(
             &db,
             &[
                 "Microsoft YaHei",
@@ -339,17 +337,27 @@ impl FontSet {
                 "Meiryo",
                 "Yu Gothic UI",
             ],
-        )?;
-        let latin_bytes = load_font_bytes(&db, &["Segoe UI", "Arial"])?;
-        let leak = |b: Vec<u8>| -> &'static [u8] { Box::leak(b.into_boxed_slice()) };
-        let korean_slice = leak(korean_bytes);
-        let cjk_slice = leak(cjk_bytes);
-        let latin_slice = leak(latin_bytes);
+        )
+        .map(leak)
+        .unwrap_or(latin_slice);
+        let korean_slice = load_font_bytes(
+            &db,
+            &["Malgun Gothic", "Malgun Gothic Semilight", "Gulim", "Dotum"],
+        )
+        .map(leak)
+        .unwrap_or(latin_slice);
+        let mut storage = vec![latin_slice];
+        if !std::ptr::eq(cjk_slice, latin_slice) {
+            storage.push(cjk_slice);
+        }
+        if !std::ptr::eq(korean_slice, latin_slice) {
+            storage.push(korean_slice);
+        }
         Some(Self {
             cjk: FontRef::try_from_slice(cjk_slice).ok()?,
             korean: FontRef::try_from_slice(korean_slice).ok()?,
             latin: FontRef::try_from_slice(latin_slice).ok()?,
-            _storage: vec![korean_slice, cjk_slice, latin_slice],
+            _storage: storage,
         })
     }
 
@@ -539,6 +547,77 @@ fn rgba_to_bgra(img: &ImageBuffer<Rgba<u8>, Vec<u8>>) -> (Vec<u8>, i32, i32) {
     (out, w, h)
 }
 
+
+fn ink_pixels(img: &ImageBuffer<Rgba<u8>, Vec<u8>>) -> u64 {
+    img.pixels()
+        .filter(|p| p[3] > 128 && (p[0] as u16 + p[1] as u16 + p[2] as u16) > 240)
+        .count() as u64
+}
+
+fn fnv1a(bytes: &[u8]) -> u64 {
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+    for &b in bytes {
+        h ^= b as u64;
+        h = h.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    h
+}
+
+fn run_render_probe(out_path: &str, text: Option<String>) -> i32 {
+    let Some(fonts) = FontSet::load() else {
+        eprintln!("render-probe: no usable system font");
+        return 2;
+    };
+    let layout = Layout::default();
+    let english = text.unwrap_or_else(|| "this is an audio capture test".to_string());
+    let mut timing = StripTiming::default();
+    let img = render_strip("kyapucha tesuto", "audio capture", &english, &fonts, &layout, &mut timing);
+    let (w, h) = (img.width(), img.height());
+    let opaque = img.pixels().filter(|p| p[3] > 128).count() as u64;
+    let ink = ink_pixels(&img);
+    let hash = fnv1a(img.as_raw());
+    if let Err(e) = img.save(out_path) {
+        eprintln!("render-probe: save {out_path}: {e}");
+        return 1;
+    }
+    println!(
+        "{{\"event\":\"render_probe\",\"width\":{w},\"height\":{h},\"opaque_px\":{opaque},\"ink_px\":{ink},\"pixel_hash\":\"{hash:016x}\"}}"
+    );
+    0
+}
+
+fn run_vr_probe() -> i32 {
+    let Some(fonts) = FontSet::load() else {
+        eprintln!("vr-probe: no usable system font");
+        return 2;
+    };
+    let layout = Layout::default();
+    let mut timing = StripTiming::default();
+    let img = render_strip(
+        "kyapucha tesuto",
+        "audio capture",
+        "this is an audio capture test",
+        &fonts,
+        &layout,
+        &mut timing,
+    );
+    let (w, h) = (img.width(), img.height());
+
+    let mut vr = VrOverlay::new("wt.vrprobe", "VR Probe");
+    if let Err(e) = vr.ensure() {
+        let safe = e.replace('\\', "\\\\").replace('"', "\\\"");
+        println!("{{\"event\":\"vr_probe\",\"vr_ready\":false,\"detail\":\"{safe}\"}}");
+        return 1;
+    }
+    let (buf, pw, ph) = rgba_premultiplied(&img);
+    let present_ok = vr.present(&buf, pw, ph, &layout.vr);
+    vr.pump_events();
+    vr.destroy();
+    println!(
+        "{{\"event\":\"vr_probe\",\"vr_ready\":true,\"present_ok\":{present_ok},\"submit_w\":{w},\"submit_h\":{h}}}"
+    );
+    0
+}
 
 const LABEL_FONT_MAX_PX: f32 = 64.0;
 const ROMAN_FONT_MAX_PX: f32 = 17.0;
@@ -1105,10 +1184,6 @@ fn emit_caption_timing(
     let _ = out.flush();
 }
 
-// Must run before any window is created. On displays scaled above 100%, without
-// per-monitor DPI awareness Windows virtualizes our SetWindowPos coordinates and
-// DWM bitmap-scales the layered window, so the overlay won't share the target
-// window's physical-pixel coordinate space and the captions land misaligned.
 fn enable_dpi_awareness_if_requested() {
     if std::env::var_os("TO_OVERLAY_DPI_AWARE").is_none() {
         return;
@@ -1119,6 +1194,16 @@ fn enable_dpi_awareness_if_requested() {
 }
 
 fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    if let Some(i) = args.iter().position(|a| a == "--render-probe") {
+        let out = args.get(i + 1).map(String::as_str).unwrap_or("overlay-probe.png");
+        let text = args.get(i + 2).cloned();
+        std::process::exit(run_render_probe(out, text));
+    }
+    if args.iter().any(|a| a == "--vr-probe") {
+        std::process::exit(run_vr_probe());
+    }
+
     enable_dpi_awareness_if_requested();
     let Some(mut overlay) = create_overlay_window() else {
         eprintln!("overlay: failed to create window (font/window)");
@@ -1304,5 +1389,46 @@ fn main() {
         }
         let visible = IsWindowVisible(overlay.hwnd).as_bool();
         eprintln!("overlay exit visible={visible}");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn render_strip_draws_text_ink() {
+        let Some(fonts) = FontSet::load() else {
+            return;
+        };
+        let layout = Layout::default();
+        let mut t = StripTiming::default();
+        let img = render_strip("", "", "hello world", &fonts, &layout, &mut t);
+        assert!(img.height() > 4, "text strip should be taller than the empty 4px strip");
+        let ink = ink_pixels(&img);
+        assert!(ink > 50, "expected glyph ink pixels, got {ink}");
+    }
+
+    #[test]
+    fn render_strip_empty_is_blank() {
+        let Some(fonts) = FontSet::load() else {
+            return;
+        };
+        let layout = Layout::default();
+        let mut t = StripTiming::default();
+        let img = render_strip("   ", "", "", &fonts, &layout, &mut t);
+        assert_eq!(img.height(), 4, "empty caption collapses to the 4px transparent strip");
+        assert_eq!(ink_pixels(&img), 0);
+    }
+
+    #[test]
+    fn rgba_premultiplied_scales_by_alpha() {
+        let mut img = ImageBuffer::from_pixel(2, 1, Rgba([200u8, 100, 50, 0]));
+        img.put_pixel(1, 0, Rgba([200, 100, 50, 255]));
+        let (out, w, h) = rgba_premultiplied(&img);
+        assert_eq!((w, h), (2, 1));
+        assert_eq!(out.len(), 8);
+        assert_eq!(&out[0..4], &[0, 0, 0, 0], "alpha 0 premultiplies to transparent black");
+        assert_eq!(&out[4..8], &[200, 100, 50, 255], "alpha 255 passes through unchanged");
     }
 }

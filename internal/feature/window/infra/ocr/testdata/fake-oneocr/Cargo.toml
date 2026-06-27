@@ -1,0 +1,12 @@
+[package]
+name = "fake-oneocr"
+version = "0.1.0"
+edition = "2021"
+description = "Fake oneocr.dll for headless CI — stands in for Microsoft's proprietary OneOCR so the real oneocr.go FFI path can be exercised and asserted without the DLL or its model."
+
+[lib]
+name = "oneocr"
+crate-type = ["cdylib"]
+
+[build-dependencies]
+cc = "1"

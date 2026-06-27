@@ -25,7 +25,7 @@ import (
 type Server struct {
 	repo      port.SettingsRepository
 	st        domain.Settings
-	engine    *ocr.Engine
+	engine    ocr.Recognizer
 	store     *cache.Store
 	runner    *runner.Runner
 	pres      *overlay.IPCPresenter
@@ -37,7 +37,7 @@ type Server struct {
 	last    runner.Update
 }
 
-func newServer(repo port.SettingsRepository, st domain.Settings, engine *ocr.Engine, store *cache.Store) *Server {
+func newServer(repo port.SettingsRepository, st domain.Settings, engine ocr.Recognizer, store *cache.Store) *Server {
 	tr := translate.NewFromSettings(st)
 	ws, _ := win.ListVisible()
 	target := win.Window{}

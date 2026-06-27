@@ -35,3 +35,11 @@ Desktop.ini
 
 
 /_uitest/
+
+# Local CI artifact downloads (screenshots for inspection)
+.ci-artifacts/
+
+# Local scratch / API dumps (never commit)
+_scratch/
+orm.json
+e2e-artifacts/
