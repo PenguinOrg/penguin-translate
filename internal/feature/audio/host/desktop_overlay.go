@@ -81,6 +81,7 @@ func (o *desktopOverlayProc) handleStdoutLine(line string) {
 			o.vrOK = ev.OK
 			o.vrDetail = ev.Detail
 			o.mu.Unlock()
+			writeOverlayLog("vr", line)
 			return
 		case "caption_timing":
 			var t struct {

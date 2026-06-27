@@ -10,6 +10,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
+	captionpkg "translation-overlay/internal/feature/audio/infra/caption"
 	"translation-overlay/internal/platform/netguard"
 )
 
@@ -77,6 +78,7 @@ func handleNativeLoopbackWS(w http.ResponseWriter, r *http.Request) {
 			if deviceID == "" {
 				deviceID = strings.TrimSpace(cmd.Device)
 			}
+			captionpkg.ResetHistory()
 			stopPump()
 			nativeStopLoopbackCapture()
 			if err := nativeStartLoopbackCapture(deviceID); err != nil {

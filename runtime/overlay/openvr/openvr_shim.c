@@ -92,7 +92,10 @@ int wt_vr_init(void) {
 
     EVRInitError err = EVRInitError_VRInitError_None;
     pVR_InitInternal(&err, EVRApplicationType_VRApplication_Overlay);
-    if (err != EVRInitError_VRInitError_None) return (int)err;
+    if (err != EVRInitError_VRInitError_None) {
+        pVR_ShutdownInternal();
+        return (int)err;
+    }
 
     // OpenVR's C API hands back the C-style function table ONLY when the version
     // is requested with the "FnTable:" prefix. Without it, GetGenericInterface
@@ -103,12 +106,19 @@ int wt_vr_init(void) {
 
     snprintf(fnName, sizeof(fnName), "FnTable:%s", IVROverlay_Version);
     intptr_t iface = pVR_GetGenericInterface(fnName, &err);
-    if (!iface || err != EVRInitError_VRInitError_None) return err ? (int)err : -10;
+    if (!iface || err != EVRInitError_VRInitError_None) {
+        pVR_ShutdownInternal();
+        return err ? (int)err : -10;
+    }
     g_overlay = (struct VR_IVROverlay_FnTable *)iface;
 
     snprintf(fnName, sizeof(fnName), "FnTable:%s", IVRSystem_Version);
     iface = pVR_GetGenericInterface(fnName, &err);
-    if (!iface || err != EVRInitError_VRInitError_None) return err ? (int)err : -11;
+    if (!iface || err != EVRInitError_VRInitError_None) {
+        g_overlay = NULL;
+        pVR_ShutdownInternal();
+        return err ? (int)err : -11;
+    }
     g_system = (struct VR_IVRSystem_FnTable *)iface;
 
     return 0;
