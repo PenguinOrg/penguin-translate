@@ -20,29 +20,36 @@ func init() {
 }
 
 type Config struct {
-	Enabled         bool   `json:"enabled"`
-	Host            string `json:"host"`
-	Port            int    `json:"port"`
-	Notification    bool   `json:"notification"`
-	OnTranslation   bool   `json:"on_translation"`
-	OnPass          bool   `json:"on_pass"`
-	IncludeEnglish  bool   `json:"include_english"`
-	IncludeOriginal bool   `json:"include_original"`
+	Enabled         bool    `json:"enabled"`
+	Host            string  `json:"host"`
+	Port            int     `json:"port"`
+	Notification    bool    `json:"notification"`
+	OnTranslation   bool    `json:"on_translation"`
+	OnPass          bool    `json:"on_pass"`
+	IncludeEnglish  bool    `json:"include_english"`
+	IncludeOriginal bool    `json:"include_original"`
+	PaceCPS         float64 `json:"pace_cps"`
+	PaceMinSeconds  float64 `json:"pace_min_seconds"`
+	PaceMaxSeconds  float64 `json:"pace_max_seconds"`
 }
 
 func defaultConfig() Config {
 	return Config{
-		Host:          "127.0.0.1",
-		Port:          9000,
-		Notification:  true,
-		OnTranslation: false,
-		OnPass:        true,
+		Host:           "127.0.0.1",
+		Port:           9000,
+		Notification:   true,
+		OnTranslation:  false,
+		OnPass:         true,
+		PaceCPS:        defaultPaceCPS,
+		PaceMinSeconds: defaultPaceMin,
+		PaceMaxSeconds: defaultPaceMax,
 	}
 }
 
 type Plugin struct {
-	mu  sync.RWMutex
-	cfg Config
+	mu   sync.RWMutex
+	cfg  Config
+	pace pacer
 }
 
 func (p *Plugin) Meta() plugin.Meta {
@@ -66,6 +73,18 @@ func (p *Plugin) ApplyConfig(raw json.RawMessage) error {
 	if next.Port <= 0 || next.Port > 65535 {
 		next.Port = 9000
 	}
+	if next.PaceCPS <= 0 {
+		next.PaceCPS = defaultPaceCPS
+	}
+	if next.PaceMinSeconds < 0 {
+		next.PaceMinSeconds = 0
+	}
+	if next.PaceMaxSeconds <= 0 {
+		next.PaceMaxSeconds = defaultPaceMax
+	}
+	if next.PaceMaxSeconds < next.PaceMinSeconds {
+		next.PaceMaxSeconds = next.PaceMinSeconds
+	}
 	p.mu.Lock()
 	p.cfg = next
 	p.mu.Unlock()
@@ -84,6 +103,9 @@ func (p *Plugin) PublicConfig() map[string]any {
 		"on_pass":          p.cfg.OnPass,
 		"include_english":  p.cfg.IncludeEnglish,
 		"include_original": p.cfg.IncludeOriginal,
+		"pace_cps":         p.cfg.PaceCPS,
+		"pace_min_seconds": p.cfg.PaceMinSeconds,
+		"pace_max_seconds": p.cfg.PaceMaxSeconds,
 	}
 }
 
@@ -115,10 +137,18 @@ func (p *Plugin) Handle(ctx context.Context, ev plugin.Event) error {
 	default:
 		return nil
 	}
+	text = formatChatboxText(text)
 	if text == "" {
 		return nil
 	}
-	return Send(cfg.Host, cfg.Port, text, cfg.Notification)
+	p.pace.enqueue(paceItem{
+		host:         cfg.Host,
+		port:         cfg.Port,
+		text:         text,
+		notification: cfg.Notification,
+		hold:         holdFor(text, cfg.PaceCPS, cfg.PaceMinSeconds, cfg.PaceMaxSeconds),
+	})
+	return nil
 }
 
 func composeConversationChatbox(includeOriginal bool, c *plugin.ConversationPayload) string {
@@ -181,6 +211,10 @@ func Send(host string, port int, text string, notification bool) error {
 	if text == "" {
 		return fmt.Errorf("empty text")
 	}
+	return sendRaw(host, port, text, notification)
+}
+
+func sendRaw(host string, port int, text string, notification bool) error {
 	host = strings.TrimSpace(host)
 	if host == "" {
 		host = "127.0.0.1"
@@ -234,6 +268,15 @@ func ConfigFromPublic(m map[string]any) Config {
 	}
 	if v, ok := m["include_original"].(bool); ok {
 		cfg.IncludeOriginal = v
+	}
+	if v, ok := m["pace_cps"].(float64); ok {
+		cfg.PaceCPS = v
+	}
+	if v, ok := m["pace_min_seconds"].(float64); ok {
+		cfg.PaceMinSeconds = v
+	}
+	if v, ok := m["pace_max_seconds"].(float64); ok {
+		cfg.PaceMaxSeconds = v
 	}
 	return cfg
 }
