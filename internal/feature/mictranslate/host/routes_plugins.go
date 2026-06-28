@@ -413,7 +413,7 @@ func (h *Host) handlePipeline(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if useNativeCloud() {
+	if h.micASRUsesNativeCloud(h.readSettingsFromDisk().EnglishASREngine) {
 		wav, lang, err := readWAVFromMultipart(r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)

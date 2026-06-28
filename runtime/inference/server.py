@@ -1484,6 +1484,11 @@ def resolve_asr(
             "OPENAI_TRANSCRIBE_MODEL", "gpt-4o-mini-transcribe"
         )
         return "openai", tm2
+    if eng in ("deepgram", "dg"):
+        raise HTTPException(
+            status_code=400,
+            detail="Deepgram ASR is cloud-only and has no local engine path; it must be served by the app's native-cloud route",
+        )
     return "local", None
 
 

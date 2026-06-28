@@ -35,7 +35,12 @@ func (h *Host) MountRoutes(mux *http.ServeMux) {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		if useNativeCloud() {
+		s := h.readSettingsFromDisk()
+		asr := s.JaRepeatASREngine
+		if strings.TrimSpace(asr) == "" {
+			asr = s.EnglishASREngine
+		}
+		if h.micASRUsesNativeCloud(asr) {
 			h.handleNativeTranscribe(w, r)
 			return
 		}

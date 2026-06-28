@@ -31,6 +31,16 @@ func TestMicTranslateLocalModelNeeds(t *testing.T) {
 			wantWhisper: true,
 		},
 		{
+			name: "split, deepgram cloud ASR needs no local model",
+			in: MicTranslateSettings{
+				PracticeEnabled:   true,
+				ForwardTranslator: "openai",
+				EnglishASREngine:  "deepgram",
+				PipelineMode:      "split",
+				Backtranslate:     "openai",
+			},
+		},
+		{
 			name: "split, nllb forward translator",
 			in: MicTranslateSettings{
 				PracticeEnabled:   true,
@@ -171,6 +181,20 @@ func TestRequiresManagedEngine(t *testing.T) {
 			want: true,
 		},
 		{
+			name: "deepgram mic ASR stays cloud-native",
+			st: Settings{
+				MicTranslate: MicTranslateSettings{
+					PracticeEnabled:   true,
+					ForwardTranslator: "openai",
+					EnglishASREngine:  "deepgram",
+					PipelineMode:      "split",
+					Backtranslate:     "openai",
+				},
+				Window: cloudWindow,
+			},
+			want: false,
+		},
+		{
 			name: "window uses local nllb",
 			st:   Settings{MicTranslate: cloudMicTranslate, Window: WindowSettings{TranslateBackend: "nllb"}},
 			want: true,
@@ -211,6 +235,9 @@ func TestNormalizeASREnginePolicy(t *testing.T) {
 		"whisper_api":    "openai_whisper",
 		"openrouter":     "openrouter",
 		"or":             "openrouter",
+		"deepgram":       "deepgram",
+		"dg":             "deepgram",
+		"  Deepgram  ":   "deepgram",
 		"whisper":        "whisper",
 		"":               "whisper",
 		"something-else": "whisper",

@@ -60,6 +60,8 @@ func normalizeASREnginePolicy(v string) string {
 		return "openai_whisper"
 	case "openrouter", "or":
 		return "openrouter"
+	case "deepgram", "dg":
+		return "deepgram"
 	default:
 		return "whisper"
 	}

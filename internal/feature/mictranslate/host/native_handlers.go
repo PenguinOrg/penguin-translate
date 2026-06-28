@@ -42,6 +42,20 @@ func (h *Host) nativeSettingsFromDisk() nativecloud.Settings {
 
 func useNativeCloud() bool { return !engine.ManagedEngineAvailable() }
 
+// cloudOnlyASR reports whether an ASR engine can ONLY be served by the Go
+// native-cloud path. The managed Python engine implements whisper/openai/
+// openrouter ASR but has no Deepgram path: forwarding a Deepgram request to it
+// silently degrades to local Whisper (resolve_asr → "local"). So mic ASR
+// dispatch must honour the engine even when the Python sidecar is running for
+// an unrelated local need (NLLB backtranslate, window translate).
+func cloudOnlyASR(asrEngine string) bool {
+	return cloudapi.NormalizeASREngine(asrEngine) == "deepgram"
+}
+
+func (h *Host) micASRUsesNativeCloud(asrEngine string) bool {
+	return useNativeCloud() || cloudOnlyASR(asrEngine)
+}
+
 func (h *Host) handleNativeTranscribe(w http.ResponseWriter, r *http.Request) {
 	wav, lang, err := readWAVFromMultipart(r)
 	if err != nil {
