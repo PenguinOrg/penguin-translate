@@ -8,6 +8,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -169,6 +170,81 @@ func DashScopeTranscribeWAV(creds Credentials, model, language, context string, 
 		detected = &dd
 	}
 	return strings.TrimSpace(content), detected, nil
+}
+
+// DeepgramTranscribeWAV transcribes a WAV clip with Deepgram's pre-recorded
+// (batch) Speech-to-Text endpoint. Deepgram is ASR-only — it does not translate,
+// so callers run the translate step through a separate chat provider.
+func DeepgramTranscribeWAV(creds Credentials, model, language string, wav []byte, timeout time.Duration) (text string, detected *string, err error) {
+	if len(wav) < 800 {
+		return "", nil, nil
+	}
+	key := strings.TrimSpace(creds.DeepgramKey)
+	if key == "" {
+		return "", nil, fmt.Errorf("Deepgram API key required for ASR")
+	}
+	base := strings.TrimSpace(creds.DeepgramBase)
+	if base == "" {
+		base = deepgramDefaultBase
+	}
+	base = strings.TrimRight(base, "/")
+	model = strings.TrimSpace(model)
+	if model == "" {
+		model = "nova-2"
+	}
+	q := url.Values{}
+	q.Set("model", model)
+	q.Set("smart_format", "true")
+	q.Set("punctuate", "true")
+	if lang := strings.TrimSpace(language); len(lang) >= 2 {
+		q.Set("language", lang[:2])
+	} else {
+		q.Set("detect_language", "true")
+	}
+	req, err := http.NewRequest(http.MethodPost, base+"/v1/listen?"+q.Encode(), bytes.NewReader(wav))
+	if err != nil {
+		return "", nil, err
+	}
+	req.Header.Set("Authorization", "Token "+key)
+	req.Header.Set("Content-Type", "audio/wav")
+	cl := &http.Client{Timeout: timeout}
+	resp, err := cl.Do(req)
+	if err != nil {
+		return "", nil, err
+	}
+	defer resp.Body.Close()
+	b, _ := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
+	if resp.StatusCode >= 400 {
+		return "", nil, fmt.Errorf("Deepgram STT HTTP %d: %s", resp.StatusCode, truncate(string(b), 2000))
+	}
+	var data struct {
+		Results struct {
+			Channels []struct {
+				DetectedLanguage string `json:"detected_language"`
+				Alternatives     []struct {
+					Transcript string `json:"transcript"`
+				} `json:"alternatives"`
+			} `json:"channels"`
+		} `json:"results"`
+	}
+	if err := json.Unmarshal(b, &data); err != nil {
+		return "", nil, err
+	}
+	if len(data.Results.Channels) == 0 || len(data.Results.Channels[0].Alternatives) == 0 {
+		return "", nil, nil
+	}
+	ch := data.Results.Channels[0]
+	text = strings.TrimSpace(ch.Alternatives[0].Transcript)
+	if d := strings.TrimSpace(ch.DetectedLanguage); d != "" {
+		if len(d) > 2 {
+			d = d[:2]
+		}
+		detected = &d
+	} else if d := strings.TrimSpace(language); len(d) >= 2 {
+		dd := d[:2]
+		detected = &dd
+	}
+	return text, detected, nil
 }
 
 func OpenAITranscribeDetailed(creds Credentials, model, language string, wav []byte, diarize bool, timeout time.Duration) (text string, segments []map[string]any, err error) {

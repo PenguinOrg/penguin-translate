@@ -35,6 +35,8 @@ func (h *Host) nativeSettingsFromDisk() nativecloud.Settings {
 		OpenAIBase:                s.OpenAIBaseURL,
 		OpenRouterKey:             s.OpenRouterAPIKey,
 		OpenRouterBase:            s.OpenRouterBaseURL,
+		DeepgramKey:               s.DeepgramAPIKey,
+		DeepgramBase:              s.DeepgramBaseURL,
 	}
 }
 

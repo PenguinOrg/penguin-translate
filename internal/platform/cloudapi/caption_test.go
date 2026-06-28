@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -54,5 +55,96 @@ func TestDashScopeTranscribeWAV(t *testing.T) {
 	}
 	if raw, _ := json.Marshal(gotBody); !strings.Contains(string(raw), "data:audio/wav;base64,") {
 		t.Error("request missing data-URI input_audio part")
+	}
+}
+
+func TestDeepgramTranscribeWAV(t *testing.T) {
+	var gotPath, gotQuery, gotAuth, gotCT string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotQuery = r.URL.RawQuery
+		gotAuth = r.Header.Get("Authorization")
+		gotCT = r.Header.Get("Content-Type")
+		_, _ = io.WriteString(w, `{"results":{"channels":[{"detected_language":"ja","alternatives":[{"transcript":"これはテストです"}]}]}}`)
+	}))
+	defer srv.Close()
+
+	creds := Credentials{DeepgramKey: "dgk", DeepgramBase: srv.URL}
+	text, detected, err := DeepgramTranscribeWAV(creds, "nova-2", "ja", make([]byte, 1000), time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if text != "これはテストです" {
+		t.Errorf("text = %q", text)
+	}
+	if detected == nil || *detected != "ja" {
+		t.Errorf("detected = %v, want ja", detected)
+	}
+	if gotPath != "/v1/listen" {
+		t.Errorf("path = %q, want /v1/listen", gotPath)
+	}
+	if gotAuth != "Token dgk" {
+		t.Errorf("auth = %q, want \"Token dgk\"", gotAuth)
+	}
+	if gotCT != "audio/wav" {
+		t.Errorf("content-type = %q, want audio/wav", gotCT)
+	}
+	for _, want := range []string{"model=nova-2", "language=ja", "smart_format=true"} {
+		if !strings.Contains(gotQuery, want) {
+			t.Errorf("query %q missing %q", gotQuery, want)
+		}
+	}
+}
+
+func TestCloudTranscribeDeepgram(t *testing.T) {
+	var path, auth string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path = r.URL.Path
+		auth = r.Header.Get("Authorization")
+		_, _ = io.WriteString(w, `{"results":{"channels":[{"alternatives":[{"transcript":"これはマイクのテストです"}]}]}}`)
+	}))
+	defer srv.Close()
+
+	creds := Credentials{DeepgramKey: "dgk", DeepgramBase: srv.URL}
+	text, _, err := CloudTranscribe(creds, "deepgram", "nova-2", "ja", make([]byte, 1000))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if path != "/v1/listen" {
+		t.Errorf("CloudTranscribe(deepgram) hit %q, want /v1/listen", path)
+	}
+	if auth != "Token dgk" {
+		t.Errorf("auth = %q, want \"Token dgk\"", auth)
+	}
+	if text != "これはマイクのテストです" {
+		t.Errorf("text = %q", text)
+	}
+}
+
+func TestDeepgramTranscribeWAVAutoDetect(t *testing.T) {
+	var gotQuery string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotQuery = r.URL.RawQuery
+		_, _ = io.WriteString(w, `{"results":{"channels":[{"detected_language":"zh-CN","alternatives":[{"transcript":"你好"}]}]}}`)
+	}))
+	defer srv.Close()
+
+	creds := Credentials{DeepgramKey: "dgk", DeepgramBase: srv.URL}
+	text, detected, err := DeepgramTranscribeWAV(creds, "nova-2", "", make([]byte, 1000), time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if text != "你好" {
+		t.Errorf("text = %q", text)
+	}
+	if detected == nil || *detected != "zh" {
+		t.Errorf("detected = %v, want zh (truncated from zh-CN)", detected)
+	}
+	q, _ := url.ParseQuery(gotQuery)
+	if q.Get("detect_language") != "true" {
+		t.Errorf("query %q missing detect_language=true for empty language", gotQuery)
+	}
+	if q.Has("language") {
+		t.Errorf("query %q should not send a language param when auto-detecting", gotQuery)
 	}
 }

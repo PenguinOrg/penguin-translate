@@ -35,6 +35,8 @@ func audioFromDomain(st domain.Settings) settingsFile {
 		OpenRouterBaseURL: st.OpenRouterBaseURL,
 		DashScopeAPIKey:   st.DashScopeAPIKey,
 		DashScopeBaseURL:  st.DashScopeBaseURL,
+		DeepgramAPIKey:    st.DeepgramAPIKey,
+		DeepgramBaseURL:   st.DeepgramBaseURL,
 	}
 }
 
@@ -45,5 +47,7 @@ func applyAudioToDomain(st *domain.Settings, s settingsFile) {
 	st.OpenRouterBaseURL = s.OpenRouterBaseURL
 	st.DashScopeAPIKey = s.DashScopeAPIKey
 	st.DashScopeBaseURL = s.DashScopeBaseURL
+	st.DeepgramAPIKey = s.DeepgramAPIKey
+	st.DeepgramBaseURL = s.DeepgramBaseURL
 	st.Audio = s.AudioSettings
 }

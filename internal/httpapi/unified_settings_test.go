@@ -105,6 +105,33 @@ func TestUnifiedSettingsCredentials(t *testing.T) {
 	}
 }
 
+func TestUnifiedSettingsDeepgram(t *testing.T) {
+	mux := newTestMux(t)
+
+	st := postSettings(t, mux, `{"deepgram_api_key":"dgk","audio":{"api_provider":"deepgram","translate_provider":"openai","pipeline_mode":"multimodal"}}`)
+	if st["deepgram_key_configured"] != true {
+		t.Fatalf("deepgram_key_configured = %v, want true", st["deepgram_key_configured"])
+	}
+	if st["deepgram_base_url"] != "https://api.deepgram.com" {
+		t.Errorf("deepgram_base_url = %v, want default", st["deepgram_base_url"])
+	}
+	a := section(t, st, "audio")
+	if a["api_provider"] != "deepgram" {
+		t.Errorf("api_provider = %v, want deepgram", a["api_provider"])
+	}
+	if a["translate_provider"] != "openai" {
+		t.Errorf("translate_provider = %v, want openai", a["translate_provider"])
+	}
+	if a["pipeline_mode"] != "split" {
+		t.Errorf("pipeline_mode = %v, want split (Deepgram is ASR/split-only)", a["pipeline_mode"])
+	}
+
+	st = postSettings(t, mux, `{"remove_deepgram_key":true}`)
+	if st["deepgram_key_configured"] != false {
+		t.Errorf("after removal, deepgram_key_configured = %v, want false", st["deepgram_key_configured"])
+	}
+}
+
 func TestUnifiedSettingsPartialSectionUpdate(t *testing.T) {
 	mux := newTestMux(t)
 

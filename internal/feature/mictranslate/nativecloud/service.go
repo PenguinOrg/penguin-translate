@@ -28,6 +28,8 @@ type Settings struct {
 	OpenAIBase                string
 	OpenRouterKey             string
 	OpenRouterBase            string
+	DeepgramKey               string
+	DeepgramBase              string
 }
 
 func (s Settings) ToCredentials() cloudapi.Credentials {
@@ -36,6 +38,8 @@ func (s Settings) ToCredentials() cloudapi.Credentials {
 		OpenAIBase:     s.OpenAIBase,
 		OpenRouterKey:  s.OpenRouterKey,
 		OpenRouterBase: s.OpenRouterBase,
+		DeepgramKey:    s.DeepgramKey,
+		DeepgramBase:   s.DeepgramBase,
 		APIProvider:    s.APIProvider,
 	}
 }
@@ -70,6 +74,8 @@ func (s Settings) transcribeModel(asrEngine string) string {
 	switch cloudapi.NormalizeASREngine(asrEngine) {
 	case "openrouter":
 		return strings.TrimSpace(s.OpenRouterTranscribeModel)
+	case "deepgram":
+		return "nova-2"
 	default:
 		if strings.TrimSpace(s.OpenAITranscribeModel) != "" {
 			return strings.TrimSpace(s.OpenAITranscribeModel)

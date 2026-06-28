@@ -20,9 +20,12 @@ func settingsResponse(app *composition.App, st domain.Settings) map[string]any {
 		"openrouter_key_configured": strings.TrimSpace(st.OpenRouterAPIKey) != "",
 		"dashscope_api_key":         st.DashScopeAPIKey,
 		"dashscope_key_configured":  strings.TrimSpace(st.DashScopeAPIKey) != "",
+		"deepgram_api_key":          st.DeepgramAPIKey,
+		"deepgram_key_configured":   strings.TrimSpace(st.DeepgramAPIKey) != "",
 		"openai_base_url":           st.OpenAIBaseURL,
 		"openrouter_base_url":       st.OpenRouterBaseURL,
 		"dashscope_base_url":        st.DashScopeBaseURL,
+		"deepgram_base_url":         st.DeepgramBaseURL,
 		"skip_words":                append([]string{}, st.Window.SkipWords...),
 		"practice":                  app.MicTranslate.PublicSettings(st),
 		"audio":                     audiohost.PublicSettings(st),
@@ -39,6 +42,9 @@ type unifiedSettingsPost struct {
 	DashScopeAPIKey     string          `json:"dashscope_api_key"`
 	RemoveDashScopeKey  bool            `json:"remove_dashscope_key"`
 	DashScopeBaseURL    string          `json:"dashscope_base_url"`
+	DeepgramAPIKey      string          `json:"deepgram_api_key"`
+	RemoveDeepgramKey   bool            `json:"remove_deepgram_key"`
+	DeepgramBaseURL     string          `json:"deepgram_base_url"`
 	SkipWords           []string        `json:"skip_words"`
 	Practice            json.RawMessage `json:"practice"`
 	Audio               json.RawMessage `json:"audio"`
@@ -90,6 +96,11 @@ func handleSettings(app *composition.App) http.HandlerFunc {
 			} else if k := strings.TrimSpace(in.DashScopeAPIKey); k != "" {
 				st.DashScopeAPIKey = k
 			}
+			if in.RemoveDeepgramKey {
+				st.DeepgramAPIKey = ""
+			} else if k := strings.TrimSpace(in.DeepgramAPIKey); k != "" {
+				st.DeepgramAPIKey = k
+			}
 			if bodyHasTopKey(body, "openai_base_url") {
 				st.OpenAIBaseURL = strings.TrimSpace(in.OpenAIBaseURL)
 			}
@@ -98,6 +109,9 @@ func handleSettings(app *composition.App) http.HandlerFunc {
 			}
 			if bodyHasTopKey(body, "dashscope_base_url") {
 				st.DashScopeBaseURL = strings.TrimSpace(in.DashScopeBaseURL)
+			}
+			if bodyHasTopKey(body, "deepgram_base_url") {
+				st.DeepgramBaseURL = strings.TrimSpace(in.DeepgramBaseURL)
 			}
 			if in.SkipWords != nil {
 				st.Window.SkipWords = normalizeSkipWords(in.SkipWords)

@@ -17,6 +17,8 @@ type settingsFile struct {
 	OpenRouterBaseURL string `json:"openrouter_base_url"`
 	DashScopeAPIKey   string `json:"dashscope_api_key"`
 	DashScopeBaseURL  string `json:"dashscope_base_url"`
+	DeepgramAPIKey    string `json:"deepgram_api_key"`
+	DeepgramBaseURL   string `json:"deepgram_base_url"`
 }
 
 func defaultSettingsFile() settingsFile {
@@ -117,14 +119,36 @@ func normalizeSettings(s settingsFile) settingsFile {
 		s.APIProvider = "openrouter"
 	case "dashscope":
 		s.APIProvider = "dashscope"
+	case "deepgram":
+		s.APIProvider = "deepgram"
 	default:
 		s.APIProvider = "openai"
 	}
-	if strings.TrimSpace(s.DashScopeBaseURL) == "" && s.APIProvider == "dashscope" {
+	// The translate step runs on its own chat provider. Deepgram is ASR-only, so
+	// its translate provider must be one of the chat providers; the others
+	// default to themselves.
+	switch strings.ToLower(strings.TrimSpace(s.TranslateProvider)) {
+	case "openrouter":
+		s.TranslateProvider = "openrouter"
+	case "dashscope":
+		s.TranslateProvider = "dashscope"
+	case "openai":
+		s.TranslateProvider = "openai"
+	default:
+		if s.APIProvider == "deepgram" {
+			s.TranslateProvider = "openai"
+		} else {
+			s.TranslateProvider = s.APIProvider
+		}
+	}
+	if strings.TrimSpace(s.DashScopeBaseURL) == "" && (s.APIProvider == "dashscope" || s.TranslateProvider == "dashscope") {
 		s.DashScopeBaseURL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
 	}
+	if strings.TrimSpace(s.DeepgramBaseURL) == "" && s.APIProvider == "deepgram" {
+		s.DeepgramBaseURL = "https://api.deepgram.com"
+	}
 	pm := strings.ToLower(strings.TrimSpace(s.PipelineMode))
-	if pm == "multimodal" {
+	if pm == "multimodal" && s.APIProvider != "deepgram" {
 		s.PipelineMode = "multimodal"
 	} else {
 		s.PipelineMode = "split"
@@ -199,7 +223,11 @@ type settingsPublicJSON struct {
 	DashScopeAPIKey            string  `json:"dashscope_api_key"`
 	DashScopeKeyConfigured     bool    `json:"dashscope_key_configured"`
 	DashScopeBaseURL           string  `json:"dashscope_base_url"`
+	DeepgramAPIKey             string  `json:"deepgram_api_key"`
+	DeepgramKeyConfigured      bool    `json:"deepgram_key_configured"`
+	DeepgramBaseURL            string  `json:"deepgram_base_url"`
 	APIProvider                string  `json:"api_provider"`
+	TranslateProvider          string  `json:"translate_provider"`
 	PipelineMode               string  `json:"pipeline_mode"`
 	TranscribeModel            string  `json:"transcribe_model"`
 	DiarizeModel               string  `json:"diarize_model"`
@@ -236,6 +264,7 @@ type settingsPublicJSON struct {
 
 type settingsPostJSON struct {
 	APIProvider                string  `json:"api_provider"`
+	TranslateProvider          string  `json:"translate_provider"`
 	PipelineMode               string  `json:"pipeline_mode"`
 	TranscribeModel            string  `json:"transcribe_model"`
 	DiarizeModel               string  `json:"diarize_model"`
@@ -281,7 +310,11 @@ func toSettingsPublicJSON(s settingsFile) settingsPublicJSON {
 		DashScopeAPIKey:            s.DashScopeAPIKey,
 		DashScopeKeyConfigured:     strings.TrimSpace(s.DashScopeAPIKey) != "",
 		DashScopeBaseURL:           s.DashScopeBaseURL,
+		DeepgramAPIKey:             s.DeepgramAPIKey,
+		DeepgramKeyConfigured:      strings.TrimSpace(s.DeepgramAPIKey) != "",
+		DeepgramBaseURL:            s.DeepgramBaseURL,
 		APIProvider:                s.APIProvider,
+		TranslateProvider:          s.TranslateProvider,
 		PipelineMode:               s.PipelineMode,
 		TranscribeModel:            s.TranscribeModel,
 		DiarizeModel:               s.DiarizeModel,
@@ -365,8 +398,12 @@ func SyncOverlayLayout(st domain.Settings) {
 
 func applyAudioPatch(next *settingsFile, in settingsPostJSON, body []byte) {
 	ap := strings.ToLower(strings.TrimSpace(in.APIProvider))
-	if bodyHasKey(body, "api_provider") && (ap == "openrouter" || ap == "openai" || ap == "dashscope") {
+	if bodyHasKey(body, "api_provider") && (ap == "openrouter" || ap == "openai" || ap == "dashscope" || ap == "deepgram") {
 		next.APIProvider = ap
+	}
+	tp := strings.ToLower(strings.TrimSpace(in.TranslateProvider))
+	if bodyHasKey(body, "translate_provider") && (tp == "openrouter" || tp == "openai" || tp == "dashscope") {
+		next.TranslateProvider = tp
 	}
 	pm := strings.ToLower(strings.TrimSpace(in.PipelineMode))
 	if bodyHasKey(body, "pipeline_mode") && (pm == "multimodal" || pm == "split") {

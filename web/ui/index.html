@@ -329,14 +329,36 @@
 
           <template x-if="s.cat === 'inference'">
             <div>
+              <p class="hint" x-text="$store.i18n.t('prefs.inf.intro')"></p>
               <fieldset>
                 <legend x-text="$store.i18n.t('prefs.inf.sourceLegend')"></legend>
                 <label class="line" style="opacity:.55"><input type="radio" disabled> <span x-text="' ' + $store.i18n.t('prefs.inf.managed')"></span></label>
                 <p class="hint" x-text="$store.i18n.t('prefs.inf.byok')"></p>
                 <div class="field">
+                  <label x-text="$store.i18n.t('prefs.inf.asrProvider')"></label>
+                  <select @change="s.setMicAsrEngine($event.target.value)">
+                    <template x-for="o in s.micAsrProviderOpts" :key="o.v"><option :value="o.v" :selected="o.v === s.micAsrEngine" x-text="o.t"></option></template>
+                  </select>
+                </div>
+                <div class="field">
+                  <label x-text="$store.i18n.t('prefs.inf.asr')"></label>
+                  <select @change="s.save({ practice: { transcribe_model: $event.target.value } })">
+                    <template x-for="o in s.opts(s.TRANSCRIBE, practice.transcribe_model)" :key="o.v"><option :value="o.v" :selected="o.v === (practice.transcribe_model || s.TRANSCRIBE[0].v)" x-text="o.t"></option></template>
+                  </select>
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend x-text="$store.i18n.t('prefs.inf.translateLegend')"></legend>
+                <div class="field">
                   <label x-text="$store.i18n.t('prefs.inf.provider')"></label>
                   <select @change="s.save({ practice: { api_provider: $event.target.value } })">
                     <template x-for="o in s.providerOpts" :key="o.v"><option :value="o.v" :selected="o.v === (practice.api_provider || 'openrouter')" x-text="o.t"></option></template>
+                  </select>
+                </div>
+                <div class="field">
+                  <label x-text="$store.i18n.t('prefs.inf.translation')"></label>
+                  <select @change="s.save({ practice: { translate_model: $event.target.value } })">
+                    <template x-for="o in s.opts(s.TRANSLATE, practice.translate_model)" :key="o.v"><option :value="o.v" :selected="o.v === (practice.translate_model || s.TRANSLATE[0].v)" x-text="o.t"></option></template>
                   </select>
                 </div>
               </fieldset>
@@ -356,21 +378,15 @@
                     <button class="key-remove" @click="s.removeKey('openrouter')" x-text="$store.i18n.t('common.remove')"></button>
                   </div>
                 </div>
-              </fieldset>
-              <fieldset>
-                <legend x-text="$store.i18n.t('prefs.inf.modelsLegend')"></legend>
-                <div class="field">
-                  <label x-text="$store.i18n.t('prefs.inf.asr')"></label>
-                  <select @change="s.save({ practice: { transcribe_model: $event.target.value } })">
-                    <template x-for="o in s.opts(s.TRANSCRIBE, practice.transcribe_model)" :key="o.v"><option :value="o.v" :selected="o.v === (practice.transcribe_model || s.TRANSCRIBE[0].v)" x-text="o.t"></option></template>
-                  </select>
-                </div>
-                <div class="field">
-                  <label x-text="$store.i18n.t('prefs.inf.translation')"></label>
-                  <select @change="s.save({ practice: { translate_model: $event.target.value } })">
-                    <template x-for="o in s.opts(s.TRANSLATE, practice.translate_model)" :key="o.v"><option :value="o.v" :selected="o.v === (practice.translate_model || s.TRANSLATE[0].v)" x-text="o.t"></option></template>
-                  </select>
-                </div>
+                <template x-if="s.micAsrEngine === 'deepgram'">
+                  <div class="field">
+                    <label x-text="$store.i18n.t('prefs.cap.deepgramKey')"></label>
+                    <div class="key-row">
+                      <input type="text" autocomplete="off" spellcheck="false" placeholder="Deepgram API key" :value="settings.deepgram_api_key || ''" @change="s.save({ deepgram_api_key: $event.target.value.trim() })">
+                      <button class="key-remove" @click="s.removeKey('deepgram')" x-text="$store.i18n.t('common.remove')"></button>
+                    </div>
+                  </div>
+                </template>
               </fieldset>
               <template x-if="s.advanced">
                 <div>
@@ -456,6 +472,39 @@
                     </div>
                   </div>
                 </template>
+                <template x-if="(audio.api_provider || 'openrouter') === 'deepgram'">
+                  <div class="field">
+                    <label x-text="$store.i18n.t('prefs.cap.deepgramKey')"></label>
+                    <div class="key-row">
+                      <input type="text" autocomplete="off" spellcheck="false" placeholder="Deepgram API key" :value="settings.deepgram_api_key || ''" @change="s.save({ deepgram_api_key: $event.target.value.trim() })">
+                      <button class="key-remove" @click="s.removeKey('deepgram')" x-text="$store.i18n.t('common.remove')"></button>
+                    </div>
+                  </div>
+                </template>
+                <template x-if="(audio.pipeline_mode || 'split') === 'split' && s.translateProvider !== s.asrProvider">
+                  <div class="field">
+                    <label x-text="$store.i18n.t('prefs.cap.translateKey')"></label>
+                    <p class="hint" x-text="$store.i18n.t('prefs.cap.translateKeyHint')"></p>
+                    <template x-if="s.translateProvider === 'openai'">
+                      <div class="key-row">
+                        <input type="text" autocomplete="off" spellcheck="false" placeholder="sk-…" :value="settings.openai_api_key || ''" @change="s.save({ openai_api_key: $event.target.value.trim() })">
+                        <button class="key-remove" @click="s.removeKey('openai')" x-text="$store.i18n.t('common.remove')"></button>
+                      </div>
+                    </template>
+                    <template x-if="s.translateProvider === 'openrouter'">
+                      <div class="key-row">
+                        <input type="text" autocomplete="off" spellcheck="false" placeholder="sk-or-…" :value="settings.openrouter_api_key || ''" @change="s.save({ openrouter_api_key: $event.target.value.trim() })">
+                        <button class="key-remove" @click="s.removeKey('openrouter')" x-text="$store.i18n.t('common.remove')"></button>
+                      </div>
+                    </template>
+                    <template x-if="s.translateProvider === 'dashscope'">
+                      <div class="key-row">
+                        <input type="text" autocomplete="off" spellcheck="false" placeholder="sk-…" :value="settings.dashscope_api_key || ''" @change="s.save({ dashscope_api_key: $event.target.value.trim() })">
+                        <button class="key-remove" @click="s.removeKey('dashscope')" x-text="$store.i18n.t('common.remove')"></button>
+                      </div>
+                    </template>
+                  </div>
+                </template>
                 <label class="line"><input type="checkbox" :checked="audio.context_enabled" @change="s.saveAudio({ context_enabled: $event.target.checked })"> <span x-text="' ' + $store.i18n.t('prefs.cap.context')"></span></label>
                 <p class="hint" x-text="$store.i18n.t('prefs.cap.contextHint')"></p>
                 <template x-if="audio.context_enabled">
@@ -496,6 +545,12 @@
                           </select>
                         </div>
                         <div class="field">
+                          <label x-text="$store.i18n.t('prefs.cap.translateProvider')"></label>
+                          <select @change="s.setTranslateProvider($event.target.value)">
+                            <template x-for="o in s.translateProviderOpts" :key="o.v"><option :value="o.v" :selected="o.v === s.translateProvider" x-text="o.t"></option></template>
+                          </select>
+                        </div>
+                        <div class="field">
                           <label x-text="$store.i18n.t('prefs.cap.translate')"></label>
                           <select @change="s.saveAudio({ translate_model: $event.target.value })">
                             <template x-for="o in s.opts(s.CAPTION_TRANSLATE, audio.translate_model)" :key="o.v"><option :value="o.v" :selected="o.v === (audio.translate_model || s.CAPTION_TRANSLATE[0].v)" x-text="o.t"></option></template>
@@ -507,6 +562,12 @@
                       <div class="field">
                         <label x-text="$store.i18n.t('prefs.cap.dashscopeBase')"></label>
                         <input type="text" autocomplete="off" spellcheck="false" placeholder="https://dashscope-intl.aliyuncs.com/compatible-mode/v1" :value="settings.dashscope_base_url || ''" @change="s.save({ dashscope_base_url: $event.target.value.trim() })">
+                      </div>
+                    </template>
+                    <template x-if="(audio.api_provider || 'openrouter') === 'deepgram'">
+                      <div class="field">
+                        <label x-text="$store.i18n.t('prefs.cap.deepgramBase')"></label>
+                        <input type="text" autocomplete="off" spellcheck="false" placeholder="https://api.deepgram.com" :value="settings.deepgram_base_url || ''" @change="s.save({ deepgram_base_url: $event.target.value.trim() })">
                       </div>
                     </template>
                   </div>

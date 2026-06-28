@@ -10,7 +10,7 @@ func CaptionPresets() map[string]any {
 		},
 		"openrouter": map[string]any{
 			"split_transcribe": []string{"qwen/qwen3-asr-flash-2026-02-10", "mistralai/voxtral-mini-transcribe", "openai/whisper-large-v3", "openai/whisper-1"},
-			"split_translate":  []string{"openai/gpt-4o-mini", "google/gemini-2.0-flash-lite-001", "xiaomi/mimo-v2.5"},
+			"split_translate":  []string{"openai/gpt-4o-mini", "google/gemini-2.5-flash-lite", "xiaomi/mimo-v2.5"},
 			"split_diarize":    []string{},
 			"multimodal":       []string{"xiaomi/mimo-v2.5", "google/gemini-2.5-flash-lite", "google/gemini-2.5-flash", "mistralai/voxtral-small-24b-2507", "openai/gpt-audio-mini"},
 		},
@@ -19,6 +19,12 @@ func CaptionPresets() map[string]any {
 			"split_translate":  []string{"qwen-flash", "qwen-plus", "qwen-turbo"},
 			"split_diarize":    []string{},
 			"multimodal":       []string{"qwen3-omni-flash", "qwen-omni-turbo"},
+		},
+		"deepgram": map[string]any{
+			"split_transcribe": []string{"nova-2", "nova-3"},
+			"split_translate":  []string{},
+			"split_diarize":    []string{},
+			"multimodal":       []string{},
 		},
 	}
 }

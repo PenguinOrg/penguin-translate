@@ -5,6 +5,8 @@
   "openrouter_base_url": "https://openrouter.ai/api/v1",
   "dashscope_api_key": "",
   "dashscope_base_url": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+  "deepgram_api_key": "",
+  "deepgram_base_url": "https://api.deepgram.com",
   "practice": {
     "forward_translator": "openai",
     "openai_forward_model": "gpt-4o-mini",
@@ -69,6 +71,7 @@
   },
   "audio": {
     "api_provider": "openai",
+    "translate_provider": "openai",
     "pipeline_mode": "split",
     "transcribe_model": "gpt-4o-mini-transcribe",
     "diarize_model": "gpt-4o-transcribe-diarize",

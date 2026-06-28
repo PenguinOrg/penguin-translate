@@ -2,6 +2,7 @@ package cloudapi
 
 import (
 	"strings"
+	"time"
 )
 
 func forwardSystemPrompt(kind string) string {
@@ -64,6 +65,8 @@ func NormalizeASREngine(v string) string {
 		return "openai_whisper"
 	case "openrouter", "or":
 		return "openrouter"
+	case "deepgram", "dg":
+		return "deepgram"
 	default:
 		return "whisper"
 	}
@@ -75,6 +78,8 @@ func CloudTranscribe(creds Credentials, asrEngine, model, language string, wav [
 		return OpenRouterTranscribeWAV(creds, model, language, wav)
 	case "openai", "openai_whisper", "openai-whisper":
 		return OpenAITranscribeWAV(creds, model, language, wav)
+	case "deepgram":
+		return DeepgramTranscribeWAV(creds, model, language, wav, 3*time.Minute)
 	default:
 		return OpenRouterTranscribeWAV(creds, model, language, wav)
 	}

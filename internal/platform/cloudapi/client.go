@@ -19,10 +19,13 @@ type Credentials struct {
 	OpenRouterBase string
 	DashScopeKey   string
 	DashScopeBase  string
+	DeepgramKey    string
+	DeepgramBase   string
 	APIProvider    string
 }
 
 const dashScopeDefaultBase = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+const deepgramDefaultBase = "https://api.deepgram.com"
 
 func (c Credentials) resolve() (key, base, provider string, err error) {
 	p := strings.ToLower(strings.TrimSpace(c.APIProvider))

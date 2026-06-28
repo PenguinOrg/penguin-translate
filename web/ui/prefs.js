@@ -6,14 +6,21 @@ const TRANSCRIBE_MODELS = [
   { v: 'qwen/qwen3-asr-flash-2026-02-10', t: 'Qwen3 ASR Flash (OpenRouter)' },
   { v: 'mistralai/voxtral-mini-transcribe', t: 'Voxtral Mini Transcribe (OpenRouter)' },
   { v: 'openai/whisper-large-v3', t: 'Whisper large-v3 (OpenRouter)' },
+  { v: 'nova-2', t: 'Nova-2 — broad languages (Deepgram)' },
+  { v: 'nova-3', t: 'Nova-3 (Deepgram)' },
   { v: 'gpt-4o-mini-transcribe', t: 'GPT-4o mini transcribe (OpenAI)' },
   { v: 'gpt-4o-transcribe', t: 'GPT-4o transcribe (OpenAI)' },
   { v: 'whisper-1', t: 'Whisper-1 (OpenAI)' },
 ];
+const MIC_ASR_DEFAULTS = {
+  openrouter: 'qwen/qwen3-asr-flash-2026-02-10',
+  openai: 'gpt-4o-mini-transcribe',
+  deepgram: 'nova-2',
+};
 const TRANSLATE_MODELS = [
   { v: 'openai/gpt-4o-mini', t: 'GPT-4o mini (OpenRouter)' },
   { v: 'openai/gpt-4o', t: 'GPT-4o (OpenRouter)' },
-  { v: 'google/gemini-2.0-flash-lite-001', t: 'Gemini 2.0 Flash Lite (OpenRouter)' },
+  { v: 'google/gemini-2.5-flash-lite', t: 'Gemini 2.5 Flash Lite (OpenRouter)' },
   { v: 'gpt-4o-mini', t: 'GPT-4o mini (OpenAI)' },
 ];
 const MULTIMODAL_MODELS = [
@@ -27,6 +34,8 @@ const CAPTION_ASR_MODELS = [
   { v: 'qwen3-asr-flash', t: 'Qwen3 ASR Flash + context (DashScope)' },
   { v: 'qwen/qwen3-asr-flash-2026-02-10', t: 'Qwen3 ASR Flash (OpenRouter, no context)' },
   { v: 'mistralai/voxtral-mini-transcribe', t: 'Voxtral Mini Transcribe (OpenRouter)' },
+  { v: 'nova-2', t: 'Nova-2 — broad languages (Deepgram)' },
+  { v: 'nova-3', t: 'Nova-3 (Deepgram)' },
   { v: 'gpt-4o-mini-transcribe', t: 'GPT-4o mini transcribe (OpenAI)' },
   { v: 'whisper-1', t: 'Whisper-1 (OpenAI)' },
 ];
@@ -34,14 +43,21 @@ const CAPTION_TRANSLATE_MODELS = [
   { v: 'qwen-flash', t: 'Qwen Flash (DashScope)' },
   { v: 'qwen-plus', t: 'Qwen Plus (DashScope)' },
   { v: 'qwen-turbo', t: 'Qwen Turbo (DashScope)' },
-  { v: 'google/gemini-2.0-flash-lite-001', t: 'Gemini 2.0 Flash Lite (OpenRouter)' },
+  { v: 'google/gemini-2.5-flash-lite', t: 'Gemini 2.5 Flash Lite (OpenRouter)' },
   { v: 'openai/gpt-4o-mini', t: 'GPT-4o mini (OpenRouter)' },
   { v: 'gpt-4o-mini', t: 'GPT-4o mini (OpenAI)' },
 ];
+// Deepgram is ASR-only, so its translate step runs on a chat provider.
 const CAPTION_DEFAULTS = {
-  dashscope: { transcribe_model: 'qwen3-asr-flash', translate_model: 'qwen-flash' },
-  openrouter: { transcribe_model: 'qwen/qwen3-asr-flash-2026-02-10', translate_model: 'google/gemini-2.0-flash-lite-001' },
-  openai: { transcribe_model: 'gpt-4o-mini-transcribe', translate_model: 'gpt-4o-mini' },
+  dashscope: { transcribe_model: 'qwen3-asr-flash', translate_provider: 'dashscope', translate_model: 'qwen-flash' },
+  openrouter: { transcribe_model: 'qwen/qwen3-asr-flash-2026-02-10', translate_provider: 'openrouter', translate_model: 'google/gemini-2.5-flash-lite' },
+  openai: { transcribe_model: 'gpt-4o-mini-transcribe', translate_provider: 'openai', translate_model: 'gpt-4o-mini' },
+  deepgram: { transcribe_model: 'nova-2', translate_provider: 'openai', translate_model: 'gpt-4o-mini' },
+};
+const TRANSLATE_MODEL_DEFAULTS = {
+  openai: 'gpt-4o-mini',
+  openrouter: 'google/gemini-2.5-flash-lite',
+  dashscope: 'qwen-flash',
 };
 const CAPTION_PRESETS = [
   { v: 'gpt-audio-mini', k: 'prefs.cap.presetGptAudioMini',
@@ -50,6 +66,8 @@ const CAPTION_PRESETS = [
     patch: { api_provider: 'openrouter', pipeline_mode: 'multimodal', multimodal_model: 'google/gemini-2.5-flash-lite', context_enabled: true } },
   { v: 'dashscope-qwen', k: 'prefs.cap.presetDashscope',
     patch: { api_provider: 'dashscope', pipeline_mode: 'split', transcribe_model: 'qwen3-asr-flash', translate_model: 'qwen-flash', context_enabled: true } },
+  { v: 'deepgram-nova', k: 'prefs.cap.presetDeepgram',
+    patch: { api_provider: 'deepgram', translate_provider: 'openai', pipeline_mode: 'split', transcribe_model: 'nova-2', translate_model: 'gpt-4o-mini', context_enabled: false } },
 ];
 
 let activeMeter = null;
@@ -93,7 +111,12 @@ export function createPrefsStore(ctx) {
     },
 
     get providerOpts() { return [{ v: 'openrouter', t: 'OpenRouter' }, { v: 'openai', t: 'OpenAI' }]; },
-    get captionProviderOpts() { return [{ v: 'dashscope', t: 'DashScope · Qwen (context)' }, { v: 'openrouter', t: 'OpenRouter' }, { v: 'openai', t: 'OpenAI' }]; },
+    get micAsrProviderOpts() { return [{ v: 'openrouter', t: 'OpenRouter' }, { v: 'openai', t: 'OpenAI' }, { v: 'deepgram', t: 'Deepgram · Nova' }]; },
+    get micAsrEngine() { return this.practice.english_asr_engine || 'openrouter'; },
+    get captionProviderOpts() { return [{ v: 'dashscope', t: 'DashScope · Qwen (context)' }, { v: 'deepgram', t: 'Deepgram · Nova' }, { v: 'openrouter', t: 'OpenRouter' }, { v: 'openai', t: 'OpenAI' }]; },
+    get translateProviderOpts() { return [{ v: 'openai', t: 'OpenAI' }, { v: 'openrouter', t: 'OpenRouter' }, { v: 'dashscope', t: 'DashScope · Qwen' }]; },
+    get translateProvider() { return this.audio.translate_provider || this.audio.api_provider || 'openai'; },
+    get asrProvider() { return this.audio.api_provider || 'openrouter'; },
     get activeCaptionPreset() {
       const a = this.audio;
       const prov = a.api_provider || 'openrouter';
@@ -177,6 +200,12 @@ export function createPrefsStore(ctx) {
       const patch = { api_provider: p, ...(CAPTION_DEFAULTS[p] || {}) };
       this.saveAudio(patch);
     },
+    setTranslateProvider(tp) {
+      this.saveAudio({ translate_provider: tp, translate_model: TRANSLATE_MODEL_DEFAULTS[tp] || 'gpt-4o-mini' });
+    },
+    setMicAsrEngine(e) {
+      this.save({ practice: { english_asr_engine: e, transcribe_model: MIC_ASR_DEFAULTS[e] || '' } });
+    },
     setCaptionPreset(v) {
       if (v === 'custom') { this.captionManual = true; return; }
       this.captionManual = false;
@@ -184,7 +213,7 @@ export function createPrefsStore(ctx) {
       if (p) this.saveAudio({ ...p.patch });
     },
     removeKey(which) {
-      const flag = { openai: 'remove_openai_key', openrouter: 'remove_openrouter_key', dashscope: 'remove_dashscope_key' }[which];
+      const flag = { openai: 'remove_openai_key', openrouter: 'remove_openrouter_key', dashscope: 'remove_dashscope_key', deepgram: 'remove_deepgram_key' }[which];
       if (flag) this.save({ [flag]: true });
     },
 

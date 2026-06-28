@@ -12,21 +12,22 @@ import (
 var transcribeSem sync.Mutex
 
 type SegmentRequest struct {
-	WAV              []byte
-	WantDiarize      bool
-	WantTranslate    bool
-	VROverlayOn      bool
-	Language         string
-	Context          string
-	TranslateContext string
-	Pipeline         string
-	Provider         string
-	TranscribeModel  string
-	DiarizeModel     string
-	TranslateModel   string
-	MultimodalModel  string
-	Timeout          time.Duration
-	Creds            cloudapi.Credentials
+	WAV               []byte
+	WantDiarize       bool
+	WantTranslate     bool
+	VROverlayOn       bool
+	Language          string
+	Context           string
+	TranslateContext  string
+	Pipeline          string
+	Provider          string
+	TranslateProvider string
+	TranscribeModel   string
+	DiarizeModel      string
+	TranslateModel    string
+	MultimodalModel   string
+	Timeout           time.Duration
+	Creds             cloudapi.Credentials
 }
 
 type Segment struct {
@@ -148,6 +149,8 @@ func transcribeSplit(req SegmentRequest) (SegmentResponse, error) {
 	switch req.Provider {
 	case "dashscope":
 		text, _, err = cloudapi.DashScopeTranscribeWAV(req.Creds, modelUse, req.Language, withRecentTranscript(req.Context), req.WAV, req.Timeout)
+	case "deepgram":
+		text, _, err = cloudapi.DeepgramTranscribeWAV(req.Creds, modelUse, req.Language, req.WAV, req.Timeout)
 	case "openrouter":
 		text, _, err = cloudapi.OpenRouterTranscribeWAV(req.Creds, modelUse, req.Language, req.WAV)
 	default:
@@ -186,7 +189,11 @@ func transcribeSplit(req SegmentRequest) (SegmentResponse, error) {
 			}
 		}
 		tTranslate := time.Now()
-		translations, err = cloudapi.BatchTranslateToEN(req.Creds, req.TranslateModel, detLang, transCtx, lines, req.Timeout)
+		// The translate step runs on its own chat provider, independent of the
+		// caption provider (which may be ASR-only, e.g. Deepgram).
+		translateCreds := req.Creds
+		translateCreds.APIProvider = req.TranslateProvider
+		translations, err = cloudapi.BatchTranslateToEN(translateCreds, req.TranslateModel, detLang, transCtx, lines, req.Timeout)
 		translateUS = time.Since(tTranslate).Microseconds()
 		if err != nil {
 			return SegmentResponse{}, err

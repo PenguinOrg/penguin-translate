@@ -19,6 +19,8 @@ type settingsFile struct {
 	OpenAIBaseURL     string `json:"openai_base_url"`
 	OpenRouterAPIKey  string `json:"openrouter_api_key"`
 	OpenRouterBaseURL string `json:"openrouter_base_url"`
+	DeepgramAPIKey    string `json:"deepgram_api_key"`
+	DeepgramBaseURL   string `json:"deepgram_base_url"`
 }
 
 func (h *Host) settingsFilePath() (string, error) {
@@ -118,6 +120,8 @@ func normalizeASREngine(v string) string {
 		return "openai_whisper"
 	case "openrouter", "or":
 		return "openrouter"
+	case "deepgram", "dg":
+		return "deepgram"
 	default:
 		return "whisper"
 	}
@@ -201,9 +205,14 @@ func normalizeSettings(s settingsFile) settingsFile {
 	if strings.TrimSpace(s.OpenRouterTranscribeModel) == "" {
 		s.OpenRouterTranscribeModel = "qwen/qwen3-asr-flash-2026-02-10"
 	}
+	if strings.TrimSpace(s.DeepgramBaseURL) == "" {
+		s.DeepgramBaseURL = "https://api.deepgram.com"
+	}
 	if strings.TrimSpace(s.TranscribeModel) == "" {
 		if s.EnglishASREngine == "openrouter" {
 			s.TranscribeModel = s.OpenRouterTranscribeModel
+		} else if s.EnglishASREngine == "deepgram" {
+			s.TranscribeModel = "nova-2"
 		} else if s.EnglishASREngine == "openai" || s.EnglishASREngine == "openai_whisper" {
 			if s.EnglishASREngine == "openai_whisper" {
 				s.TranscribeModel = s.OpenAIWhisperModel

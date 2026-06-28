@@ -32,6 +32,8 @@ func micTranslateFromDomain(st domain.Settings) settingsFile {
 		OpenAIBaseURL:        st.OpenAIBaseURL,
 		OpenRouterAPIKey:     st.OpenRouterAPIKey,
 		OpenRouterBaseURL:    st.OpenRouterBaseURL,
+		DeepgramAPIKey:       st.DeepgramAPIKey,
+		DeepgramBaseURL:      st.DeepgramBaseURL,
 	}
 }
 
@@ -40,6 +42,8 @@ func applyMicTranslateToDomain(st *domain.Settings, s settingsFile) {
 	st.OpenAIBaseURL = s.OpenAIBaseURL
 	st.OpenRouterAPIKey = s.OpenRouterAPIKey
 	st.OpenRouterBaseURL = s.OpenRouterBaseURL
+	st.DeepgramAPIKey = s.DeepgramAPIKey
+	st.DeepgramBaseURL = s.DeepgramBaseURL
 	st.MicTranslate = s.MicTranslateSettings
 }
 

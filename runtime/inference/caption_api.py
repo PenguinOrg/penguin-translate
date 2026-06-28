@@ -55,7 +55,7 @@ OPENAI_DEFAULT_BASE = "https://api.openai.com/v1"
 MULTIMODAL_MODEL_PRESETS = [
     "xiaomi/mimo-v2-flash",
     "google/gemini-2.5-flash",
-    "google/gemini-2.0-flash-lite-001",
+    "google/gemini-2.5-flash-lite",
     "openai/gpt-4o-mini",
 ]
 
@@ -72,7 +72,7 @@ SPLIT_TRANSCRIBE_PRESETS_OPENROUTER = [
 ]
 
 SPLIT_TRANSLATE_PRESETS_OPENROUTER = [
-    "google/gemini-2.0-flash-lite-001",
+    "google/gemini-2.5-flash-lite",
     "openai/gpt-4o-mini",
     "xiaomi/mimo-v2-flash",
 ]

@@ -9,6 +9,8 @@ type Settings struct {
 	OpenRouterBaseURL string               `json:"openrouter_base_url"`
 	DashScopeAPIKey   string               `json:"dashscope_api_key"`
 	DashScopeBaseURL  string               `json:"dashscope_base_url"`
+	DeepgramAPIKey    string               `json:"deepgram_api_key"`
+	DeepgramBaseURL   string               `json:"deepgram_base_url"`
 	MicTranslate      MicTranslateSettings `json:"practice"`
 	Window            WindowSettings       `json:"window"`
 	Audio             AudioSettings        `json:"audio"`
@@ -78,6 +80,7 @@ type WindowSettings struct {
 
 type AudioSettings struct {
 	APIProvider                string  `json:"api_provider"`
+	TranslateProvider          string  `json:"translate_provider"`
 	PipelineMode               string  `json:"pipeline_mode"`
 	TranscribeModel            string  `json:"transcribe_model"`
 	DiarizeModel               string  `json:"diarize_model"`
@@ -117,6 +120,7 @@ func DefaultSettings(engineBaseURL string) Settings {
 		OpenAIBaseURL:     "",
 		OpenRouterBaseURL: "https://openrouter.ai/api/v1",
 		DashScopeBaseURL:  "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+		DeepgramBaseURL:   "https://api.deepgram.com",
 		MicTranslate: MicTranslateSettings{
 			ForwardTranslator:         "openai",
 			OpenAIForwardModel:        "gpt-4o-mini",
@@ -161,6 +165,7 @@ func DefaultSettings(engineBaseURL string) Settings {
 		},
 		Audio: AudioSettings{
 			APIProvider:                "openai",
+			TranslateProvider:          "openai",
 			PipelineMode:               "split",
 			TranscribeModel:            "gpt-4o-mini-transcribe",
 			DiarizeModel:               "gpt-4o-transcribe-diarize",

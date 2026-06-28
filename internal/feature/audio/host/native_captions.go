@@ -57,6 +57,10 @@ func (h *Host) handleNativeTranscribeSegment(w http.ResponseWriter, r *http.Requ
 	if provider == "" {
 		provider = "openrouter"
 	}
+	translateProvider := strings.ToLower(strings.TrimSpace(s.TranslateProvider))
+	if translateProvider == "" {
+		translateProvider = provider
+	}
 	lang := strings.ToLower(strings.TrimSpace(s.PrimaryLanguage))
 	if v := strings.ToLower(firstFormValue(r.MultipartForm.Value, "language")); v == "auto" {
 		lang = ""
@@ -86,6 +90,8 @@ func (h *Host) handleNativeTranscribeSegment(w http.ResponseWriter, r *http.Requ
 			tm = "qwen/qwen3-asr-flash-2026-02-10"
 		case "dashscope":
 			tm = "qwen3-asr-flash"
+		case "deepgram":
+			tm = "nova-2"
 		default:
 			tm = "gpt-4o-mini-transcribe"
 		}
@@ -94,9 +100,9 @@ func (h *Host) handleNativeTranscribeSegment(w http.ResponseWriter, r *http.Requ
 		dm = "gpt-4o-transcribe-diarize"
 	}
 	if trm == "" {
-		switch provider {
+		switch translateProvider {
 		case "openrouter":
-			trm = "google/gemini-2.0-flash-lite-001"
+			trm = "google/gemini-2.5-flash-lite"
 		case "dashscope":
 			trm = "qwen-flash"
 		default:
@@ -119,20 +125,21 @@ func (h *Host) handleNativeTranscribeSegment(w http.ResponseWriter, r *http.Requ
 	translateContext := captionpkg.BuildTranslateContext(s.ContextEnabled, s.ContextHint)
 
 	req := captionpkg.SegmentRequest{
-		WAV:              wav,
-		WantDiarize:      formTruthy(r.MultipartForm.Value, "diarize"),
-		WantTranslate:    formTruthy(r.MultipartForm.Value, "translate_to_en"),
-		VROverlayOn:      s.OpenVROverlayEnabled,
-		Language:         lang,
-		Context:          captionContext,
-		TranslateContext: translateContext,
-		Pipeline:         pipe,
-		Provider:         provider,
-		TranscribeModel:  tm,
-		DiarizeModel:     dm,
-		TranslateModel:   trm,
-		MultimodalModel:  mm,
-		Timeout:          timeout,
+		WAV:               wav,
+		WantDiarize:       formTruthy(r.MultipartForm.Value, "diarize"),
+		WantTranslate:     formTruthy(r.MultipartForm.Value, "translate_to_en"),
+		VROverlayOn:       s.OpenVROverlayEnabled,
+		Language:          lang,
+		Context:           captionContext,
+		TranslateContext:  translateContext,
+		Pipeline:          pipe,
+		Provider:          provider,
+		TranslateProvider: translateProvider,
+		TranscribeModel:   tm,
+		DiarizeModel:      dm,
+		TranslateModel:    trm,
+		MultimodalModel:   mm,
+		Timeout:           timeout,
 		Creds: cloudapi.Credentials{
 			OpenAIKey:      s.OpenAIAPIKey,
 			OpenAIBase:     s.OpenAIBaseURL,
@@ -140,6 +147,8 @@ func (h *Host) handleNativeTranscribeSegment(w http.ResponseWriter, r *http.Requ
 			OpenRouterBase: s.OpenRouterBaseURL,
 			DashScopeKey:   s.DashScopeAPIKey,
 			DashScopeBase:  s.DashScopeBaseURL,
+			DeepgramKey:    s.DeepgramAPIKey,
+			DeepgramBase:   s.DeepgramBaseURL,
 			APIProvider:    provider,
 		},
 	}
