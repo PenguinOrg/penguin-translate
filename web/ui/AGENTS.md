@@ -70,11 +70,33 @@ languages bar.
   window · ■ Stop · ▸ Recognized text → inline dual-pane). The app-bar `#btnOverlay` toggles
   it and reflects running state. Keeps `/api/config` · `/api/start|stop|state` · `/api/events`
   SSE; F9 pause is a Go hotkey. OCR translates into `practice.my_language` (no own picker).
+- `features/practice.{js,css}` — `createPracticeStore(ctx)`. The pronunciation-practice utility
+  (NOT a view): a docked `<aside class="pp">` inside `.work`, toggled by the app-bar `#btnPractice`
+  (mirrors the Overlay launch pattern); conversation stays live beside it (`.conv-thread` gets
+  `padding-right` via `:has(#practicePanel:not([hidden]))` so reply bubbles clear the panel). Two
+  ways in: type an English phrase, or click the **🎙 Practice this phrase** chip on a translated
+  reply (`practiceTurn(turn)` seeds target/tokens from the turn's first scoreable row and sets
+  `activeTargetId`). Flow: `/api/translate-text` (EN→target) → **hold-to-record** on its **own** mic
+  stream (pointer down/up + `setPointerCapture`; reuses the conversation mic *device*) →
+  `/api/transcribe` (target ASR) → `/api/score` → score ring + attempt dots + `spoken_match_ranges`
+  highlight + matched legend. Only jp/zh/ko are scoreable; target = `activeTargetId || first
+  scoreable langs.others`. Reading-aid ruby (furigana/pinyin/romaja) renders in BOTH the panel and
+  the conversation logs from `reading_aid_tokens` (the Go `readingaid` pkg now fills zh/ko, not just
+  ja). `/api/score` 400s unless `practice_enabled`, and the server scores by `practice.target_language`
+  (NOT the request body), so the store POSTs both on open/target-change (`ensureReady`). Pauses the
+  conversation mic while recording via `conversation.suspendMic()/resumeMic()` so the attempt never
+  reaches the main translate flow. Practice settings (recognition provider/model + pass mark) live
+  only in the **Practice** prefs pane (Preferences sidebar) — the panel has no settings button of its
+  own. A fresh `AudioContext` is `resume()`d before capture or the clip is silent (a 0%).
+  Empty/short clips surface a message + the ASR engine, not a silent 0.
 - `prefs.js` — `createPrefsStore(ctx)`: the `prefs` store + a Basic⇄Advanced toggle (persisted
   in `localStorage` `pt.prefs.advanced`). Panes (declarative `x-if` in `index.html`, so only
   the active pane is in the DOM): **Languages** (a view onto the `langs` store), **Inference
   source** (provider + API keys + curated model `<select>`s — no free-text model fields; adv:
-  pipeline, GPUs, load models), **Capture & audio** (advanced-only; VAD/clip tuning + a live
+  pipeline, GPUs, load models), **Practice** (recognition provider + model for the spoken attempt —
+  `setMicAsrEngine` keeps `english_asr_engine`/`ja_repeat_asr_engine`/`transcribe_model` consistent
+  since the engine sends `transcribe_model` verbatim — + pass-mark `score_threshold`), **Capture &
+  audio** (advanced-only; VAD/clip tuning + a live
   mic-activation meter, an imperative WebAudio island), **Overlays & VR**, **Integrations**
   (VRChat OSC), **Diagnostics** (engine info + log tail; adv: the pipeline-latency iframe).
   Writes `/api/settings`; secret handling unchanged (keys POST, stored 0600, re-injected,
@@ -82,8 +104,6 @@ languages bar.
 - `shared/` — `dsp.js` (DSP + `createSpeechSegmenter`), `vad/*` (Silero gate/stream),
   `http.js` (`getJSON`/`postJSON`/`postForm`/`httpErrorMessage`), `ui.css`, `alpine.esm.js`.
   Never re-inline DSP/fetch/VAD — call into these modules.
-- `features/mic.{js,css}` — **legacy, unreferenced** (old Mic-translate view; still the only
-  home of the `/api/score` practice UI). NOT migrated to Alpine, not imported by the shell.
 
 ### Any↔any translation
 `/api/languages` returns `{languages:[legacy profiles], catalog:[full registry]}`; the UI reads

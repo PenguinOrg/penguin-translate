@@ -14,6 +14,7 @@ import (
 	"translation-overlay/internal/feature/mictranslate/infra/plugin/vrchatosc"
 	scorepkg "translation-overlay/internal/feature/mictranslate/infra/score"
 	"translation-overlay/internal/feature/mictranslate/nativecloud"
+	"translation-overlay/internal/platform/lang/readingaid"
 	"translation-overlay/internal/platform/timing"
 )
 
@@ -390,7 +391,8 @@ func (h *Host) engineTranslatePair(ctx context.Context, s settingsFile, srcID, t
 		"reading_aid":        string(tgt.ReadingAid),
 		"reading_aid_tokens": []map[string]string{},
 	}
-	if tgt.ReadingAid == languages.ReadingAidFurigana {
+	switch tgt.ReadingAid {
+	case languages.ReadingAidFurigana:
 		if raw, ok := payload["furigana"].([]any); ok {
 			toks := make([]map[string]string, 0, len(raw))
 			for _, item := range raw {
@@ -404,6 +406,8 @@ func (h *Host) engineTranslatePair(ctx context.Context, s settingsFile, srcID, t
 			}
 			row["reading_aid_tokens"] = toks
 		}
+	case languages.ReadingAidPinyin, languages.ReadingAidRomaja:
+		row["reading_aid_tokens"] = readingaid.AsMaps(readingaid.Tokens(string(tgt.ReadingAid), translated))
 	}
 	return row, nil
 }

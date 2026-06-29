@@ -2,6 +2,7 @@ import Alpine from '/ui/shared/alpine.esm.js';
 import * as i18n from '/ui/i18n/index.js';
 import { createConversationStore } from '/ui/features/conversation.js';
 import { createOverlayStore } from '/ui/features/overlay.js';
+import { createPracticeStore } from '/ui/features/practice.js';
 import { getJSON, postJSON } from '/ui/shared/http.js';
 import { createPrefsStore } from '/ui/prefs.js';
 
@@ -164,6 +165,7 @@ Alpine.data('prefsModal', () => ({
 }));
 
 Alpine.store('overlay', createOverlayStore({ Toasts }));
+Alpine.store('practice', createPracticeStore({ Toasts }));
 
 const AUTH_RE = /\b40[13]\b|unauthorized|forbidden|api[\s_-]?key|no valid[^.]*key|invalid[^.]*key|missing[^.]*key/i;
 
@@ -208,6 +210,7 @@ window.App = {
   views: [Alpine.store('conversation')],
   i18n: I18n,
   Overlay: Alpine.store('overlay'),
+  Practice: Alpine.store('practice'),
 };
 
 Langs.load();

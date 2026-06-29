@@ -7,6 +7,7 @@ import (
 	"translation-overlay/internal/feature/mictranslate/infra/languages"
 	"translation-overlay/internal/platform/cloudapi"
 	"translation-overlay/internal/platform/lang/furigana"
+	"translation-overlay/internal/platform/lang/readingaid"
 )
 
 type Settings struct {
@@ -152,6 +153,8 @@ func readingAidTokens(aid languages.ReadingAid, text string) []map[string]string
 		for _, t := range toks {
 			out = append(out, map[string]string{"surface": t.Surface, "reading": t.Reading})
 		}
+	case languages.ReadingAidPinyin, languages.ReadingAidRomaja:
+		out = readingaid.AsMaps(readingaid.Tokens(string(aid), text))
 	}
 	return out
 }

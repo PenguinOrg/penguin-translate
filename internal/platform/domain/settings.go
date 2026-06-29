@@ -133,7 +133,7 @@ func DefaultSettings(engineBaseURL string) Settings {
 			TranslateModel:            "openai/gpt-4o-mini",
 			JaRepeatASREngine:         "openrouter",
 			Backtranslate:             "local",
-			ScoreThreshold:            100,
+			ScoreThreshold:            70,
 			TargetLanguage:            "jp",
 			MyLanguage:                "en",
 			OtherLanguages:            []string{"ja"},

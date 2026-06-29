@@ -1,0 +1,87 @@
+/* Pronunciation practice — a launchable utility docked over the conversation
+   surface (mirrors the Overlay utility). Lives inside .work (position:relative). */
+.pp {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 356px; z-index: 40;
+  display: flex; flex-direction: column;
+  background: var(--bg-raised); border-left: 1px solid var(--border-strong);
+  box-shadow: -18px 0 44px rgba(0, 0, 0, 0.42);
+}
+.pp[hidden] { display: none; }
+
+/* While the panel is open, keep the conversation thread clear of it so
+   right-aligned reply bubbles (and their "Practice this phrase" chip) stay visible. */
+.work:has(#practicePanel:not([hidden])) .conv-thread { padding-right: 372px; }
+
+.pp-head { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.pp-title { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--text-bright); }
+.pp-title .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.pp-dir { font-size: 11px; color: var(--muted); }
+.pp-x { margin-left: auto; width: 26px; height: 26px; border-radius: 6px; background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: 13px; line-height: 1; }
+.pp-x:hover { background: var(--surface-2); color: var(--text); border-color: var(--border-strong); }
+
+.pp-body { flex: 1; min-height: 0; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+.pp-hint { color: var(--muted); font-size: 0.82rem; line-height: 1.5; padding: 14px 2px; }
+
+.pp-label { display: block; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--faint); margin-bottom: 5px; }
+
+.pp-en-row { display: flex; gap: 6px; }
+.pp-en-row input { flex: 1; min-width: 0; }
+.pp-en-row button { flex-shrink: 0; padding: 0.3rem 0.6rem; }
+
+.pp-target { border: 1px solid var(--border-strong); border-radius: var(--r-m); background: linear-gradient(180deg, var(--accent-soft), transparent 60%), var(--surface); padding: 12px 12px 14px; }
+.pp-target-tag { font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--accent); margin-bottom: 8px; }
+.pp-target-text { font-size: 24px; line-height: 1.55; color: var(--text-bright); word-break: break-word; }
+.pp-target-text:empty::before { content: "—"; color: var(--faint); }
+.pp-target-text.lang-zh { font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", system-ui, sans-serif; }
+.pp-target-text.lang-ko { font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif; }
+.pp-target-text ruby rt { font-size: 0.42em; color: var(--muted); user-select: none; }
+
+.pp-rec { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px; font-size: 0.9rem; font-weight: 600; border-radius: var(--r-m); background: var(--accent); border: 1px solid var(--accent); color: #fff; }
+.pp-rec:hover:not(:disabled) { background: var(--accent-press); border-color: var(--accent-press); }
+.pp-rec:disabled { opacity: 0.45; cursor: not-allowed; }
+.pp-rec.recording { background: #3a2026; border-color: #5c3038; color: #f0b9c0; }
+.pp-rec.recording::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--err); animation: pp-pulse 1s ease-in-out infinite; }
+@keyframes pp-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+.pp-score { display: flex; align-items: center; gap: 14px; padding: 12px; border: 1px solid var(--border); border-radius: var(--r-m); background: var(--surface); }
+.pp-ring { width: 64px; height: 64px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.pp-ring > span { width: 50px; height: 50px; border-radius: 50%; background: var(--surface); display: flex; align-items: center; justify-content: center; font-size: 0.95rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pp-score.ok .pp-ring > span { color: #9df0c0; }
+.pp-score.bad .pp-ring > span { color: #f0c49a; }
+.pp-score-meta { min-width: 0; }
+.pp-verdict { font-size: 0.85rem; font-weight: 600; }
+.pp-score.ok .pp-verdict { color: var(--ok); }
+.pp-score.bad .pp-verdict { color: var(--warn); }
+.pp-threshold { font-size: 0.7rem; color: var(--faint); margin-top: 2px; }
+.pp-dots { display: flex; gap: 5px; margin-top: 8px; flex-wrap: wrap; }
+.pp-dots i { width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--border-strong); background: transparent; }
+.pp-dots i.ok { background: var(--ok); border-color: var(--ok); }
+.pp-dots i.bad { background: #51361d; border-color: var(--warn); }
+
+.pp-said-text { font-size: 1.05rem; line-height: 1.7; color: var(--muted); word-break: break-word; }
+.pp-said-text .hit { color: var(--text-bright); background: rgba(61, 201, 127, 0.16); border-radius: 5px; box-decoration-break: clone; -webkit-box-decoration-break: clone; padding: 1px 3px; }
+
+.pp-rec-row { display: flex; gap: 8px; }
+.pp-rec-row .pp-rec { flex: 1; width: auto; }
+.pp-retry { flex-shrink: 0; width: 46px; border-radius: var(--r-m); background: var(--surface-2); border: 1px solid var(--border); color: var(--text); font-size: 1.05rem; }
+.pp-retry:hover:not(:disabled) { background: var(--surface-3); border-color: var(--border-strong); }
+.pp-retry:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.pp-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.pp-pass { display: inline-flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--muted); flex-shrink: 0; }
+.pp-pass select { padding: 0.2rem 0.4rem; font-size: 0.74rem; }
+.pp-heard { font-size: 0.68rem; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
+
+.pp-legend { display: flex; align-items: center; gap: 6px; margin-top: 9px; font-size: 0.7rem; color: var(--faint); }
+.pp-legend .sw { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+.pp-legend .sw.ok { background: rgba(61, 201, 127, 0.5); }
+.pp-legend .sw.miss { background: var(--surface-3); border: 1px solid var(--border-strong); }
+
+/* "Practice this phrase" chip on a translated conversation reply. */
+.turn-practice { display: block; width: fit-content; margin: 8px 0 0 auto; padding: 4px 10px; font-size: 11.5px;
+  border-radius: 999px; background: var(--accent-soft); border: 1px solid transparent; color: #bcd0ff; }
+.turn-practice:hover { color: var(--text-bright); border-color: var(--accent); background: var(--accent-soft); }
+
+.pp-foot { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-top: 1px solid var(--border); }
+.pp-status { flex: 1; min-width: 0; font-size: 0.72rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pp-next { flex-shrink: 0; }

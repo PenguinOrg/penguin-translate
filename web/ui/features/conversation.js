@@ -49,7 +49,7 @@ export function createConversationStore(ctx) {
     scrollAfter();
   }
   function appendOutgoing(original, results) {
-    const rows = (results || []).map((r) => { const L = lang(r.language); return { flag: L.flag, label: r.label || L.label, textHTML: rubyHTML(r.text, r.reading_aid_tokens) }; });
+    const rows = (results || []).map((r) => { const L = lang(r.language); return { flag: L.flag, label: r.label || L.label, textHTML: rubyHTML(r.text, r.reading_aid_tokens), language: r.language, text: r.text, tokens: r.reading_aid_tokens || [] }; });
     S().turns.push({ id: ++turnId, kind: 'out', srcShort: lang(myLang).short_label, original, rows, pending: false, time: clock() });
     scrollAfter();
   }
@@ -113,7 +113,7 @@ export function createConversationStore(ctx) {
     scrollAfter();
     try {
       const out = await translateMulti(text, myLang, otherLangs, true);
-      const rows = (out.results || []).map((r) => { const L = lang(r.language); return { flag: L.flag, label: r.label || L.label, textHTML: rubyHTML(r.text, r.reading_aid_tokens) }; });
+      const rows = (out.results || []).map((r) => { const L = lang(r.language); return { flag: L.flag, label: r.label || L.label, textHTML: rubyHTML(r.text, r.reading_aid_tokens), language: r.language, text: r.text, tokens: r.reading_aid_tokens || [] }; });
       const idx = S().turns.findIndex((t) => t.id === id);
       if (idx >= 0) { S().turns[idx].rows = rows; S().turns[idx].pending = false; }
       scrollAfter();
@@ -294,6 +294,12 @@ export function createConversationStore(ctx) {
 
     _simulateIncoming(text, detected) { return renderIncoming(text, detected); },
     _langs() { return { my: myLang, others: otherLangs.slice(), incomingHint: incomingHint() }; },
+
+    // Mic arbitration for the practice utility: pause this surface's mic capture
+    // while a practice attempt records on its own stream, then resume. No-op
+    // unless we're actively listening on the mic lane.
+    suspendMic() { if (this.listening && this.lanes.mic.enabled) { try { micLane.stop(); } catch (_) {} } },
+    async resumeMic() { if (this.listening && this.lanes.mic.enabled) { try { await micLane.start(); } catch (_) {} } },
 
     async init() {
       // Register before any await: the langs store broadcasts `langschange` while

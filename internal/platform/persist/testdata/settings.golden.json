@@ -19,7 +19,7 @@
     "translate_model": "openai/gpt-4o-mini",
     "ja_repeat_asr_engine": "openrouter",
     "backtranslate": "local",
-    "score_threshold": 100,
+    "score_threshold": 70,
     "output_device_name": "",
     "tts_engine": "openrouter",
     "openai_tts_model": "",

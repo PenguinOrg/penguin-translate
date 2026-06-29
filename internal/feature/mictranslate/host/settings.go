@@ -45,7 +45,7 @@ func defaultSettingsFile() settingsFile {
 			TranslateModel:            "openai/gpt-4o-mini",
 			JaRepeatASREngine:         "openrouter",
 			Backtranslate:             "local",
-			ScoreThreshold:            100,
+			ScoreThreshold:            70,
 			TargetLanguage:            "jp",
 			MyLanguage:                "en",
 			OtherLanguages:            []string{"ja"},
@@ -243,7 +243,7 @@ func normalizeSettings(s settingsFile) settingsFile {
 	s.Backtranslate = bt
 
 	if s.ScoreThreshold == 0 {
-		s.ScoreThreshold = 100
+		s.ScoreThreshold = 70
 	}
 	s.ScoreThreshold = clampThreshold(s.ScoreThreshold)
 

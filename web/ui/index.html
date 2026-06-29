@@ -122,6 +122,8 @@
       </div>
     </div>
     <div class="spacer"></div>
+    <button type="button" class="ghost" id="btnPractice" :title="$store.i18n.t('practice.openTitle')"
+            :class="{ active: $store.practice.open }" @click="$store.practice.toggle()">🎙 <span x-text="$store.i18n.t('practice.button')"></span></button>
     <button type="button" class="ghost" id="btnOverlay" :title="$store.i18n.t('appbar.overlayTitle')"
             :class="{ active: $store.overlay.open || $store.overlay.running }" :data-running="$store.overlay.running"
             @click="$store.overlay.toggle()">🖥 <span x-text="$store.i18n.t('appbar.overlay')"></span></button>
@@ -226,6 +228,9 @@
                       <div class="trans-row"><div class="tlang" x-text="r.flag + ' ' + r.label"></div><div class="ttext" x-html="r.textHTML"></div></div>
                     </template>
                   </div>
+                  <template x-if="!turn.pending && $store.practice.scoreableRow(turn)">
+                    <button type="button" class="turn-practice" :title="$store.i18n.t('practice.openTitle')" @click="$store.practice.practiceTurn(turn)">🎙 <span x-text="$store.i18n.t('practice.thisPhrase')"></span></button>
+                  </template>
                 </div>
                 <div class="meta" x-text="turn.time"></div>
               </div>
@@ -234,6 +239,77 @@
         </template>
       </div>
     </section>
+
+    <aside class="pp" id="practicePanel" x-data hidden :hidden="!$store.practice.open" aria-label="Pronunciation practice">
+      <div class="pp-head">
+        <span class="pp-title"><span class="dot"></span> <span x-text="$store.i18n.t('practice.title')"></span></span>
+        <span class="pp-dir" x-text="$store.practice.dirLabel"></span>
+        <button type="button" class="pp-x" :title="$store.i18n.t('common.close')" @click="$store.practice.close()">✕</button>
+      </div>
+      <div class="pp-body">
+        <template x-if="!$store.practice.targetReady">
+          <div class="pp-hint" x-text="$store.i18n.t('practice.noTarget')"></div>
+        </template>
+        <template x-if="$store.practice.targetReady">
+          <div style="display:contents">
+            <div>
+              <label class="pp-label" x-text="$store.i18n.t('practice.sayInEnglish')"></label>
+              <div class="pp-en-row">
+                <input type="text" id="ppEnglish" autocomplete="off" :placeholder="$store.i18n.t('practice.enPlaceholder')"
+                       x-model="$store.practice.english" @keydown.enter.prevent="$store.practice.loadPhrase()">
+                <button type="button" class="primary" :disabled="$store.practice.busy" @click="$store.practice.loadPhrase()" x-text="$store.i18n.t('practice.translate')"></button>
+              </div>
+            </div>
+            <div class="pp-target">
+              <div class="pp-target-tag" x-text="$store.i18n.t('practice.sayThis') + ' · ' + $store.practice.targetLabel"></div>
+              <div class="pp-target-text" :class="$store.practice.targetCls" x-html="$store.practice.targetHTML"></div>
+            </div>
+            <div class="pp-rec-row">
+              <button type="button" class="pp-rec" :class="{ recording: $store.practice.recording }"
+                      :disabled="$store.practice.busy || !$store.practice.hasPhrase"
+                      @pointerdown.prevent="$event.currentTarget.setPointerCapture($event.pointerId); $store.practice.holdStart()"
+                      @pointerup="$store.practice.holdEnd()" @pointercancel="$store.practice.cancelHold()"
+                      x-text="$store.practice.recBtnLabel"></button>
+              <button type="button" class="pp-retry" :disabled="$store.practice.busy || !$store.practice.score.has"
+                      :title="$store.i18n.t('practice.retry')" @click="$store.practice.retry()">↻</button>
+            </div>
+            <div class="pp-controls">
+              <label class="pp-pass"><span x-text="$store.i18n.t('practice.passMark')"></span>
+                <select @change="$store.practice.setThreshold($event.target.value)">
+                  <template x-for="n in $store.practice.THRESHOLDS" :key="n"><option :value="n" :selected="n === $store.practice.threshold" x-text="n + '%'"></option></template>
+                </select>
+              </label>
+              <template x-if="$store.practice.hasHeard">
+                <span class="pp-heard" :title="$store.practice.heard.text" x-text="$store.i18n.t('practice.heardVia', { info: $store.practice.heardLine })"></span>
+              </template>
+            </div>
+            <template x-if="$store.practice.score.has">
+              <div class="pp-score" :class="$store.practice.score.accepted ? 'ok' : 'bad'">
+                <div class="pp-ring" :style="$store.practice.ringStyle()"><span x-text="$store.practice.score.value + '%'"></span></div>
+                <div class="pp-score-meta">
+                  <div class="pp-verdict" x-text="$store.practice.verdict"></div>
+                  <div class="pp-threshold" x-text="$store.practice.thresholdLabel"></div>
+                  <div class="pp-dots">
+                    <template x-for="(a, ai) in $store.practice.attempts" :key="ai"><i :class="a.accepted ? 'ok' : 'bad'"></i></template>
+                  </div>
+                </div>
+              </div>
+            </template>
+            <template x-if="$store.practice.spokenHTML">
+              <div>
+                <label class="pp-label" x-text="$store.i18n.t('practice.whatYouSaid')"></label>
+                <div class="pp-said-text" x-html="$store.practice.spokenHTML"></div>
+                <div class="pp-legend"><span class="sw ok"></span> <span x-text="$store.i18n.t('practice.matched')"></span> · <span class="sw miss"></span> <span x-text="$store.i18n.t('practice.notMatched')"></span></div>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+      <div class="pp-foot">
+        <span class="pp-status" x-text="$store.practice.status"></span>
+        <button type="button" class="pp-next" :disabled="$store.practice.busy" @click="$store.practice.nextPhrase()" x-text="$store.i18n.t('practice.next')"></button>
+      </div>
+    </aside>
   </main>
 
   <div class="runbar" id="runBar" x-data>
@@ -430,6 +506,54 @@
                   </fieldset>
                 </div>
               </template>
+            </div>
+          </template>
+
+          <template x-if="s.cat === 'practice'">
+            <div>
+              <p class="hint" x-text="$store.i18n.t('prefs.prac.intro')"></p>
+              <fieldset>
+                <legend x-text="$store.i18n.t('prefs.prac.recLegend')"></legend>
+                <div class="field">
+                  <label x-text="$store.i18n.t('prefs.prac.provider')"></label>
+                  <select @change="s.setMicAsrEngine($event.target.value)">
+                    <template x-for="o in s.micAsrProviderOpts" :key="o.v"><option :value="o.v" :selected="o.v === s.micAsrEngine" x-text="o.t"></option></template>
+                  </select>
+                </div>
+                <div class="field">
+                  <label x-text="$store.i18n.t('prefs.prac.model')"></label>
+                  <select @change="s.save({ practice: { transcribe_model: $event.target.value } })">
+                    <template x-for="o in s.opts(s.practiceAsrModelOpts, practice.transcribe_model)" :key="o.v"><option :value="o.v" :selected="o.v === (practice.transcribe_model || s.practiceAsrModelOpts[0].v)" x-text="o.t"></option></template>
+                  </select>
+                  <p class="hint" x-text="$store.i18n.t('prefs.prac.modelHint')"></p>
+                </div>
+                <template x-if="s.micAsrEngine === 'openrouter'">
+                  <div class="field"><label x-text="$store.i18n.t('prefs.inf.openrouterKey')"></label>
+                    <div class="key-row"><input type="text" autocomplete="off" spellcheck="false" placeholder="sk-or-…" :value="settings.openrouter_api_key || ''" @change="s.save({ openrouter_api_key: $event.target.value.trim() })"><button class="key-remove" @click="s.removeKey('openrouter')" x-text="$store.i18n.t('common.remove')"></button></div>
+                  </div>
+                </template>
+                <template x-if="s.micAsrEngine === 'openai'">
+                  <div class="field"><label x-text="$store.i18n.t('prefs.inf.openaiKey')"></label>
+                    <div class="key-row"><input type="text" autocomplete="off" spellcheck="false" placeholder="sk-…" :value="settings.openai_api_key || ''" @change="s.save({ openai_api_key: $event.target.value.trim() })"><button class="key-remove" @click="s.removeKey('openai')" x-text="$store.i18n.t('common.remove')"></button></div>
+                  </div>
+                </template>
+                <template x-if="s.micAsrEngine === 'deepgram'">
+                  <div class="field"><label x-text="$store.i18n.t('prefs.cap.deepgramKey')"></label>
+                    <div class="key-row"><input type="text" autocomplete="off" spellcheck="false" placeholder="Deepgram API key" :value="settings.deepgram_api_key || ''" @change="s.save({ deepgram_api_key: $event.target.value.trim() })"><button class="key-remove" @click="s.removeKey('deepgram')" x-text="$store.i18n.t('common.remove')"></button></div>
+                  </div>
+                </template>
+              </fieldset>
+              <fieldset>
+                <legend x-text="$store.i18n.t('prefs.prac.scoreLegend')"></legend>
+                <div class="field">
+                  <label x-text="$store.i18n.t('prefs.prac.passMark')"></label>
+                  <select @change="s.save({ practice: { score_threshold: Number($event.target.value) } })">
+                    <template x-for="n in s.passThresholdOpts" :key="n"><option :value="n" :selected="n === (practice.score_threshold || 70)" x-text="n + '%'"></option></template>
+                  </select>
+                  <p class="hint" x-text="$store.i18n.t('prefs.prac.passHint')"></p>
+                </div>
+              </fieldset>
+              <p class="hint" x-text="$store.i18n.t('prefs.prac.phraseNote')"></p>
             </div>
           </template>
 

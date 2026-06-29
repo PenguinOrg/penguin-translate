@@ -17,6 +17,24 @@ const MIC_ASR_DEFAULTS = {
   openai: 'gpt-4o-mini-transcribe',
   deepgram: 'nova-2',
 };
+// Practice transcribes your spoken target attempt; the model id must belong to
+// the chosen provider (the engine sends `transcribe_model` verbatim).
+const PRACTICE_ASR_MODELS = {
+  openrouter: [
+    { v: 'qwen/qwen3-asr-flash-2026-02-10', t: 'Qwen3 ASR Flash (OpenRouter)' },
+    { v: 'mistralai/voxtral-mini-transcribe', t: 'Voxtral Mini Transcribe (OpenRouter)' },
+    { v: 'openai/whisper-large-v3', t: 'Whisper large-v3 (OpenRouter)' },
+  ],
+  openai: [
+    { v: 'gpt-4o-mini-transcribe', t: 'GPT-4o mini transcribe (OpenAI)' },
+    { v: 'gpt-4o-transcribe', t: 'GPT-4o transcribe (OpenAI)' },
+    { v: 'whisper-1', t: 'Whisper-1 (OpenAI)' },
+  ],
+  deepgram: [
+    { v: 'nova-2', t: 'Nova-2 — broad languages (Deepgram)' },
+    { v: 'nova-3', t: 'Nova-3 (Deepgram)' },
+  ],
+};
 const TRANSLATE_MODELS = [
   { v: 'openai/gpt-4o-mini', t: 'GPT-4o mini (OpenRouter)' },
   { v: 'openai/gpt-4o', t: 'GPT-4o (OpenRouter)' },
@@ -119,11 +137,13 @@ export function createPrefsStore(ctx) {
     get audio() { return this.settings.audio || {}; },
     get window() { return this.win || {}; },
     get categories() {
-      const c = [{ id: 'languages' }, { id: 'inference' }];
+      const c = [{ id: 'languages' }, { id: 'inference' }, { id: 'practice' }];
       if (this.advanced) c.push({ id: 'capture' });
       c.push({ id: 'window' }, { id: 'overlays' }, { id: 'integrations' }, { id: 'diagnostics' });
       return c;
     },
+    get practiceAsrModelOpts() { return PRACTICE_ASR_MODELS[this.micAsrEngine] || PRACTICE_ASR_MODELS.openrouter; },
+    get passThresholdOpts() { return [50, 60, 70, 80, 90, 100]; },
 
     get providerOpts() { return [{ v: 'openrouter', t: 'OpenRouter' }, { v: 'openai', t: 'OpenAI' }]; },
     get micAsrProviderOpts() { return [{ v: 'openrouter', t: 'OpenRouter' }, { v: 'openai', t: 'OpenAI' }, { v: 'deepgram', t: 'Deepgram · Nova' }]; },
@@ -246,7 +266,10 @@ export function createPrefsStore(ctx) {
       this.saveAudio({ translate_provider: tp, translate_model: TRANSLATE_MODEL_DEFAULTS[tp] || 'gpt-4o-mini' });
     },
     setMicAsrEngine(e) {
-      this.save({ practice: { english_asr_engine: e, transcribe_model: MIC_ASR_DEFAULTS[e] || '' } });
+      // Keep ja_repeat_asr_engine (what /api/transcribe prefers for practice) in
+      // step with the Speak engine, and reset the model to one that provider owns
+      // — the engine sends transcribe_model verbatim, so a cross-provider id fails.
+      this.save({ practice: { english_asr_engine: e, ja_repeat_asr_engine: e, transcribe_model: MIC_ASR_DEFAULTS[e] || '' } });
     },
     setCaptionPreset(v) {
       if (v === 'custom') { this.captionManual = true; return; }
