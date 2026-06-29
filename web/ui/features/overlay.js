@@ -47,6 +47,9 @@ export function createOverlayStore(ctx) {
     },
     async saveConfig() {
       const w = this.windows.find((x) => String(x.hwnd) === String(this.selectedHwnd));
+      // Refresh first so provider/model/source-lang changed in Preferences (which POST the
+      // same window config) survive this round-trip instead of being overwritten with stale values.
+      await this.loadConfig();
       const armedExe = (!w && this.savedConfig.window_process_name) ? this.savedConfig.window_process_name : '';
       if (!w && !armedExe) { this.setStatus(tt('overlay.selectWindow'), true); return false; }
       const body = { ...this.savedConfig,

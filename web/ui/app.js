@@ -158,6 +158,7 @@ Alpine.data('prefsModal', () => ({
   get s() { return Alpine.store('prefs'); },
   get practice() { return this.s.practice; },
   get audio() { return this.s.audio; },
+  get win() { return this.s.window; },
   get settings() { return this.s.settings; },
   get osc() { return this.s.oscDraft; },
 }));

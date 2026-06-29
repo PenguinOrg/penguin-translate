@@ -602,6 +602,83 @@
             </div>
           </template>
 
+          <template x-if="s.cat === 'window'">
+            <div>
+              <p class="hint" x-text="$store.i18n.t('prefs.win.intro')"></p>
+              <fieldset>
+                <legend x-text="$store.i18n.t('prefs.win.translateLegend')"></legend>
+                <div class="field">
+                  <label x-text="$store.i18n.t('prefs.win.provider')"></label>
+                  <select @change="s.saveWindow({ translate_backend: $event.target.value })">
+                    <template x-for="o in s.winProviderOpts" :key="o.v"><option :value="o.v" :selected="o.v === s.winBackend" x-text="o.t"></option></template>
+                  </select>
+                </div>
+                <template x-if="s.winBackend === 'openrouter'">
+                  <div class="field">
+                    <label x-text="$store.i18n.t('prefs.win.model')"></label>
+                    <select @change="s.saveWindow({ openrouter_model: $event.target.value })">
+                      <template x-for="o in s.opts(s.WINDOW_OR, win.openrouter_model)" :key="o.v"><option :value="o.v" :selected="o.v === (win.openrouter_model || s.WINDOW_OR[0].v)" x-text="o.t"></option></template>
+                    </select>
+                  </div>
+                </template>
+                <template x-if="s.winBackend === 'openai'">
+                  <div class="field">
+                    <label x-text="$store.i18n.t('prefs.win.model')"></label>
+                    <select @change="s.saveWindow({ openai_model: $event.target.value })">
+                      <template x-for="o in s.opts(s.WINDOW_OAI, win.openai_model)" :key="o.v"><option :value="o.v" :selected="o.v === (win.openai_model || s.WINDOW_OAI[0].v)" x-text="o.t"></option></template>
+                    </select>
+                  </div>
+                </template>
+                <template x-if="s.winBackend === 'nllb'">
+                  <p class="hint" x-text="$store.i18n.t('prefs.win.nllbHint')"></p>
+                </template>
+                <template x-if="s.winBackend === 'openrouter'">
+                  <div class="field">
+                    <label x-text="$store.i18n.t('prefs.inf.openrouterKey')"></label>
+                    <div class="key-row">
+                      <input type="text" autocomplete="off" spellcheck="false" placeholder="sk-or-…" :value="settings.openrouter_api_key || ''" @change="s.save({ openrouter_api_key: $event.target.value.trim() })">
+                      <button class="key-remove" @click="s.removeKey('openrouter')" x-text="$store.i18n.t('common.remove')"></button>
+                    </div>
+                  </div>
+                </template>
+                <template x-if="s.winBackend === 'openai'">
+                  <div class="field">
+                    <label x-text="$store.i18n.t('prefs.inf.openaiKey')"></label>
+                    <div class="key-row">
+                      <input type="text" autocomplete="off" spellcheck="false" placeholder="sk-…" :value="settings.openai_api_key || ''" @change="s.save({ openai_api_key: $event.target.value.trim() })">
+                      <button class="key-remove" @click="s.removeKey('openai')" x-text="$store.i18n.t('common.remove')"></button>
+                    </div>
+                  </div>
+                </template>
+              </fieldset>
+              <fieldset>
+                <legend x-text="$store.i18n.t('prefs.win.langLegend')"></legend>
+                <div class="field">
+                  <label x-text="$store.i18n.t('prefs.win.source')"></label>
+                  <select @change="s.saveWindow({ source_lang: $event.target.value })">
+                    <template x-for="o in s.winSourceOpts" :key="o.v"><option :value="o.v" :selected="o.v === (win.source_lang || 'auto')" x-text="o.t"></option></template>
+                  </select>
+                  <p class="hint" x-text="$store.i18n.t('prefs.win.sourceHint')"></p>
+                </div>
+                <div class="field">
+                  <label x-text="$store.i18n.t('prefs.win.target')"></label>
+                  <input type="text" disabled :value="$store.i18n.langName(s.winTarget)" style="opacity:.6;cursor:not-allowed">
+                  <p class="hint" x-text="$store.i18n.t('prefs.win.targetHint')"></p>
+                </div>
+              </fieldset>
+              <template x-if="s.advanced">
+                <fieldset>
+                  <legend x-text="$store.i18n.t('prefs.win.advancedLegend')"></legend>
+                  <div class="field"><label x-text="$store.i18n.t('prefs.win.poll')"></label><input type="number" min="300" max="10000" step="100" :value="win.poll_interval_ms || 1500" @change="s.saveWindow({ poll_interval_ms: Number($event.target.value) || 1500 })"></div>
+                  <template x-if="s.winBackend === 'nllb'">
+                    <div class="field"><label x-text="$store.i18n.t('prefs.win.nllbBase')"></label><input type="text" autocomplete="off" spellcheck="false" :value="win.nllb_base_url || ''" @change="s.saveWindow({ nllb_base_url: $event.target.value.trim() })"></div>
+                  </template>
+                  <label class="line"><input type="checkbox" :checked="win.overlay_show_source" @change="s.saveWindow({ overlay_show_source: $event.target.checked })"> <span x-text="' ' + $store.i18n.t('prefs.win.showSource')"></span></label>
+                </fieldset>
+              </template>
+            </div>
+          </template>
+
           <template x-if="s.cat === 'overlays'">
             <div>
               <p class="hint" x-text="$store.i18n.t('prefs.ov.intro')"></p>

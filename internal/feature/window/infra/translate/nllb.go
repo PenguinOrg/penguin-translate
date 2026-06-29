@@ -23,6 +23,19 @@ func nllbTargetCode(target string) string {
 	return "eng_Latn"
 }
 
+// nllbSourceCode mirrors nllbTargetCode for the source side: "auto" lets the engine
+// auto-detect, a known language maps to its NLLB code, and anything else stays "auto".
+func nllbSourceCode(source string) string {
+	source = strings.ToLower(strings.TrimSpace(source))
+	if source == "" || source == "auto" {
+		return "auto"
+	}
+	if l, ok := languages.Lang(source); ok && l.NLLBCode != "" {
+		return l.NLLBCode
+	}
+	return "auto"
+}
+
 type NLLBClient struct {
 	BaseURL string
 	HTTP    *http.Client
@@ -102,7 +115,7 @@ func (c *NLLBClient) ToTargetBatch(lines []string, sourceLang string) ([]LineRes
 	}
 	body := map[string]any{
 		"items":       items,
-		"source_lang": sourceLang,
+		"source_lang": nllbSourceCode(sourceLang),
 		"target_lang": nllbTargetCode(c.Target),
 	}
 	raw, err := json.Marshal(body)

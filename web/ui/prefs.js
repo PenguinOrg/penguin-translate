@@ -59,6 +59,17 @@ const TRANSLATE_MODEL_DEFAULTS = {
   openrouter: 'google/gemini-2.5-flash-lite',
   dashscope: 'qwen-flash',
 };
+// Window-OCR translation runs on a chat model; OpenRouter uses prefixed ids, OpenAI bare ids.
+const WINDOW_OR_MODELS = [
+  { v: 'openai/gpt-4o-mini', t: 'GPT-4o mini (OpenRouter)' },
+  { v: 'openai/gpt-4o', t: 'GPT-4o (OpenRouter)' },
+  { v: 'google/gemini-2.5-flash-lite', t: 'Gemini 2.5 Flash Lite (OpenRouter)' },
+  { v: 'google/gemini-2.5-flash', t: 'Gemini 2.5 Flash (OpenRouter)' },
+];
+const WINDOW_OAI_MODELS = [
+  { v: 'gpt-4o-mini', t: 'GPT-4o mini (OpenAI)' },
+  { v: 'gpt-4o', t: 'GPT-4o (OpenAI)' },
+];
 const CAPTION_PRESETS = [
   { v: 'gpt-audio-mini', k: 'prefs.cap.presetGptAudioMini',
     patch: { api_provider: 'openrouter', pipeline_mode: 'multimodal', multimodal_model: 'openai/gpt-audio-mini', context_enabled: true } },
@@ -86,6 +97,7 @@ export function createPrefsStore(ctx) {
     captionManual: false,
     advanced: (() => { try { return localStorage.getItem('pt.prefs.advanced') === '1'; } catch (_) { return false; } })(),
     settings: {},
+    win: {},
     catalog: [],
     cuda: [],
     loaded: false,
@@ -100,13 +112,16 @@ export function createPrefsStore(ctx) {
     MULTIMODAL: MULTIMODAL_MODELS,
     CAPTION_ASR: CAPTION_ASR_MODELS,
     CAPTION_TRANSLATE: CAPTION_TRANSLATE_MODELS,
+    WINDOW_OR: WINDOW_OR_MODELS,
+    WINDOW_OAI: WINDOW_OAI_MODELS,
 
     get practice() { return this.settings.practice || {}; },
     get audio() { return this.settings.audio || {}; },
+    get window() { return this.win || {}; },
     get categories() {
       const c = [{ id: 'languages' }, { id: 'inference' }];
       if (this.advanced) c.push({ id: 'capture' });
-      c.push({ id: 'overlays' }, { id: 'integrations' }, { id: 'diagnostics' });
+      c.push({ id: 'window' }, { id: 'overlays' }, { id: 'integrations' }, { id: 'diagnostics' });
       return c;
     },
 
@@ -144,6 +159,15 @@ export function createPrefsStore(ctx) {
     get alignOpts() { return [{ v: 'left', t: tt('prefs.ov.alignLeft') }, { v: 'center', t: tt('prefs.ov.alignCenter') }, { v: 'right', t: tt('prefs.ov.alignRight') }]; },
     get gpuOpts() { return this.cuda.length ? this.cuda.map((d) => ({ v: d.id, t: d.label || d.id })) : [{ v: '', t: tt('prefs.inf.noGpus') }]; },
 
+    get winBackend() { return this.window.translate_backend || 'openrouter'; },
+    get winProviderOpts() { return [{ v: 'openrouter', t: 'OpenRouter' }, { v: 'openai', t: 'OpenAI' }, { v: 'nllb', t: tt('prefs.win.providerLocal') }]; },
+    get winTarget() { return this.practice.my_language || 'en'; },
+    get winSourceOpts() {
+      const i18n = Alpine.store('i18n');
+      const auto = { v: 'auto', t: tt('prefs.win.sourceAuto') };
+      return [auto, ...this.catalog.map((l) => ({ v: l.id, t: (l.flag ? l.flag + ' ' : '') + i18n.langName(l.id, l.label) }))];
+    },
+
     opts(presets, current) {
       const out = presets.map((o) => ({ v: o.v ?? o, t: o.t ?? (o.v ?? o) }));
       if (current && !out.some((o) => o.v === current)) out.push({ v: current, t: current + ' (current)' });
@@ -156,6 +180,7 @@ export function createPrefsStore(ctx) {
 
     async loadAll() {
       try { const r = await fetch('/api/settings'); this.settings = r.ok ? await r.json() : {}; } catch (_) { this.settings = {}; }
+      try { const r = await fetch('/api/config'); this.win = r.ok ? await r.json() : {}; } catch (_) { this.win = {}; }
       try { const r = await fetch('/api/languages'); this.catalog = r.ok ? (await r.json()).catalog || [] : []; } catch (_) { this.catalog = []; }
       try { const r = await fetch('/api/cuda-devices'); this.cuda = r.ok ? (await r.json()).devices || [] : []; } catch (_) { this.cuda = []; }
       this.syncOscDraft();
@@ -196,6 +221,23 @@ export function createPrefsStore(ctx) {
       }
     },
     async saveAudio(patch) { await this.save({ audio: patch }); document.dispatchEvent(new CustomEvent('audioprefschange', { detail: patch })); },
+    // Window-OCR settings live on domain.Settings.Window and persist via /api/config (the
+    // window server), which also re-wires the live translator. Reload before merging so a
+    // window pick made in the overlay bar isn't clobbered by a stale cached config.
+    async saveWindow(patch) {
+      try {
+        let cur = this.win;
+        try { const g = await fetch('/api/config'); if (g.ok) cur = await g.json(); } catch (_) {}
+        const body = { ...cur, ...patch };
+        const r = await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        if (!r.ok) throw new Error(await httpErrorMessage(r, 'POST /api/config'));
+        this.win = body;
+        this.status = tt('prefs.saved'); this.statusErr = false;
+      } catch (e) {
+        this.status = String(e?.message || e); this.statusErr = true;
+        ctx.Toasts.push({ title: tt('prefs.saveFailed'), msg: String(e?.message || e) });
+      }
+    },
     setCaptionProvider(p) {
       const patch = { api_provider: p, ...(CAPTION_DEFAULTS[p] || {}) };
       this.saveAudio(patch);
