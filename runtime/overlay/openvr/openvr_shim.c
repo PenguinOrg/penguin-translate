@@ -91,7 +91,7 @@ int wt_vr_init(void) {
     if (pVR_IsHmdPresent && !pVR_IsHmdPresent()) return -4;
 
     EVRInitError err = EVRInitError_VRInitError_None;
-    pVR_InitInternal(&err, EVRApplicationType_VRApplication_Overlay);
+    pVR_InitInternal(&err, EVRApplicationType_VRApplication_Background);
     if (err != EVRInitError_VRInitError_None) {
         pVR_ShutdownInternal();
         return (int)err;
