@@ -11,6 +11,7 @@ type Settings struct {
 	DashScopeBaseURL  string               `json:"dashscope_base_url"`
 	DeepgramAPIKey    string               `json:"deepgram_api_key"`
 	DeepgramBaseURL   string               `json:"deepgram_base_url"`
+	AzureSpeechKey    string               `json:"azure_speech_key"`
 	MicTranslate      MicTranslateSettings `json:"practice"`
 	Window            WindowSettings       `json:"window"`
 	Audio             AudioSettings        `json:"audio"`
@@ -29,6 +30,8 @@ type MicTranslateSettings struct {
 	JaRepeatASREngine         string                     `json:"ja_repeat_asr_engine"`
 	Backtranslate             string                     `json:"backtranslate"`
 	ScoreThreshold            int                        `json:"score_threshold"`
+	AssessmentMode            string                     `json:"assessment_mode"`
+	AzureSpeechRegion         string                     `json:"azure_speech_region"`
 	OutputDeviceName          string                     `json:"output_device_name"`
 	TTSEngine                 string                     `json:"tts_engine"`
 	OpenAITTSModel            string                     `json:"openai_tts_model"`
@@ -134,6 +137,7 @@ func DefaultSettings(engineBaseURL string) Settings {
 			JaRepeatASREngine:         "openrouter",
 			Backtranslate:             "local",
 			ScoreThreshold:            70,
+			AssessmentMode:            "basic",
 			TargetLanguage:            "jp",
 			MyLanguage:                "en",
 			OtherLanguages:            []string{"ja"},
@@ -143,7 +147,8 @@ func DefaultSettings(engineBaseURL string) Settings {
 			VadSilenceContinuousMs:    2700,
 			TTSRepeatDebounceMs:       1500,
 			TTSEngine:                 "openrouter",
-			TTSVoiceName:              "coral",
+			OpenAITTSModel:            "google/gemini-3.1-flash-tts-preview",
+			TTSVoiceName:              "Kore",
 			PipelineMode:              "split",
 			APIProvider:               "openrouter",
 			MultimodalModel:           "xiaomi/mimo-v2-flash",

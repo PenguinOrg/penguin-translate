@@ -22,6 +22,8 @@ func settingsResponse(app *composition.App, st domain.Settings) map[string]any {
 		"dashscope_key_configured":  strings.TrimSpace(st.DashScopeAPIKey) != "",
 		"deepgram_api_key":          st.DeepgramAPIKey,
 		"deepgram_key_configured":   strings.TrimSpace(st.DeepgramAPIKey) != "",
+		"azure_speech_key":          st.AzureSpeechKey,
+		"azure_key_configured":      strings.TrimSpace(st.AzureSpeechKey) != "",
 		"openai_base_url":           st.OpenAIBaseURL,
 		"openrouter_base_url":       st.OpenRouterBaseURL,
 		"dashscope_base_url":        st.DashScopeBaseURL,
@@ -45,6 +47,8 @@ type unifiedSettingsPost struct {
 	DeepgramAPIKey      string          `json:"deepgram_api_key"`
 	RemoveDeepgramKey   bool            `json:"remove_deepgram_key"`
 	DeepgramBaseURL     string          `json:"deepgram_base_url"`
+	AzureSpeechKey      string          `json:"azure_speech_key"`
+	RemoveAzureKey      bool            `json:"remove_azure_key"`
 	SkipWords           []string        `json:"skip_words"`
 	Practice            json.RawMessage `json:"practice"`
 	Audio               json.RawMessage `json:"audio"`
@@ -100,6 +104,11 @@ func handleSettings(app *composition.App) http.HandlerFunc {
 				st.DeepgramAPIKey = ""
 			} else if k := strings.TrimSpace(in.DeepgramAPIKey); k != "" {
 				st.DeepgramAPIKey = k
+			}
+			if in.RemoveAzureKey {
+				st.AzureSpeechKey = ""
+			} else if k := strings.TrimSpace(in.AzureSpeechKey); k != "" {
+				st.AzureSpeechKey = k
 			}
 			if bodyHasTopKey(body, "openai_base_url") {
 				st.OpenAIBaseURL = strings.TrimSpace(in.OpenAIBaseURL)

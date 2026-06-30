@@ -35,6 +35,37 @@ const PRACTICE_ASR_MODELS = {
     { v: 'nova-3', t: 'Nova-3 (Deepgram)' },
   ],
 };
+// Practice "hear it" speaks the target phrase; the model id must belong to the
+// chosen TTS provider. OpenRouter-Gemini and DashScope-Qwen are multilingual
+// (handle JP/ZH/KO); Deepgram Aura voices are English-only (the model id IS the
+// voice). All four combos below are verified against the live endpoints.
+const PRACTICE_TTS_MODELS = {
+  openrouter: [
+    { v: 'google/gemini-3.1-flash-tts-preview', t: 'Gemini Flash TTS — 70+ languages (OpenRouter)' },
+  ],
+  dashscope: [
+    { v: 'qwen3-tts-flash', t: 'Qwen3-TTS Flash — multilingual (DashScope)' },
+  ],
+  openai: [
+    { v: 'gpt-4o-mini-tts', t: 'GPT-4o mini TTS (OpenAI)' },
+    { v: 'tts-1', t: 'TTS-1 (OpenAI)' },
+    { v: 'tts-1-hd', t: 'TTS-1 HD (OpenAI)' },
+  ],
+  deepgram: [
+    { v: 'aura-2-thalia-en', t: 'Aura-2 Thalia · English (Deepgram)' },
+    { v: 'aura-2-andromeda-en', t: 'Aura-2 Andromeda · English (Deepgram)' },
+    { v: 'aura-asteria-en', t: 'Aura Asteria · English (Deepgram)' },
+  ],
+};
+const TTS_DEFAULTS = { openrouter: 'google/gemini-3.1-flash-tts-preview', dashscope: 'qwen3-tts-flash', openai: 'gpt-4o-mini-tts', deepgram: 'aura-2-thalia-en' };
+// Voices vary by provider; Deepgram has none (the model id carries the voice).
+const TTS_VOICES = {
+  openrouter: ['Kore', 'Puck', 'Zephyr', 'Charon', 'Fenrir', 'Aoede'],
+  dashscope: ['Cherry', 'Ethan', 'Dylan', 'Jada', 'Sunny'],
+  openai: ['alloy', 'ash', 'ballad', 'coral', 'echo', 'fable', 'nova', 'onyx', 'sage', 'shimmer'],
+  deepgram: [],
+};
+const TTS_VOICE_DEFAULTS = { openrouter: 'Kore', dashscope: 'Cherry', openai: 'coral', deepgram: '' };
 const TRANSLATE_MODELS = [
   { v: 'openai/gpt-4o-mini', t: 'GPT-4o mini (OpenRouter)' },
   { v: 'openai/gpt-4o', t: 'GPT-4o (OpenRouter)' },
@@ -144,6 +175,13 @@ export function createPrefsStore(ctx) {
     },
     get practiceAsrModelOpts() { return PRACTICE_ASR_MODELS[this.micAsrEngine] || PRACTICE_ASR_MODELS.openrouter; },
     get passThresholdOpts() { return [50, 60, 70, 80, 90, 100]; },
+    get ttsEngine() { return this.practice.tts_engine || 'openrouter'; },
+    get ttsProviderOpts() { return [{ v: 'openrouter', t: 'OpenRouter · Gemini' }, { v: 'dashscope', t: 'DashScope · Qwen' }, { v: 'openai', t: 'OpenAI' }, { v: 'deepgram', t: 'Deepgram · Aura (English)' }]; },
+    get practiceTtsModelOpts() { return PRACTICE_TTS_MODELS[this.ttsEngine] || PRACTICE_TTS_MODELS.openrouter; },
+    get ttsVoiceOpts() { return (TTS_VOICES[this.ttsEngine] || []).map((v) => ({ v, t: v })); },
+    get ttsHasVoice() { return (TTS_VOICES[this.ttsEngine] || []).length > 0; },
+    get assessmentMode() { return this.practice.assessment_mode || 'basic'; },
+    get assessmentModeOpts() { return [{ v: 'basic', t: tt('prefs.prac.modeBasic') }, { v: 'azure', t: tt('prefs.prac.modeAzure') }]; },
 
     get providerOpts() { return [{ v: 'openrouter', t: 'OpenRouter' }, { v: 'openai', t: 'OpenAI' }]; },
     get micAsrProviderOpts() { return [{ v: 'openrouter', t: 'OpenRouter' }, { v: 'openai', t: 'OpenAI' }, { v: 'deepgram', t: 'Deepgram · Nova' }]; },
@@ -271,6 +309,11 @@ export function createPrefsStore(ctx) {
       // — the engine sends transcribe_model verbatim, so a cross-provider id fails.
       this.save({ practice: { english_asr_engine: e, ja_repeat_asr_engine: e, transcribe_model: MIC_ASR_DEFAULTS[e] || '' } });
     },
+    setTtsEngine(e) {
+      // Reset the model AND voice to ones the new provider owns — voice ids differ
+      // per provider (OpenAI alloy/coral, Gemini Kore/Puck, Deepgram has none).
+      this.save({ practice: { tts_engine: e, openai_tts_model: TTS_DEFAULTS[e] || '', tts_voice_name: TTS_VOICE_DEFAULTS[e] || '' } });
+    },
     setCaptionPreset(v) {
       if (v === 'custom') { this.captionManual = true; return; }
       this.captionManual = false;
@@ -278,7 +321,7 @@ export function createPrefsStore(ctx) {
       if (p) this.saveAudio({ ...p.patch });
     },
     removeKey(which) {
-      const flag = { openai: 'remove_openai_key', openrouter: 'remove_openrouter_key', dashscope: 'remove_dashscope_key', deepgram: 'remove_deepgram_key' }[which];
+      const flag = { openai: 'remove_openai_key', openrouter: 'remove_openrouter_key', dashscope: 'remove_dashscope_key', deepgram: 'remove_deepgram_key', azure: 'remove_azure_key' }[which];
       if (flag) this.save({ [flag]: true });
     },
 

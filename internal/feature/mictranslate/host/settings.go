@@ -21,6 +21,9 @@ type settingsFile struct {
 	OpenRouterBaseURL string `json:"openrouter_base_url"`
 	DeepgramAPIKey    string `json:"deepgram_api_key"`
 	DeepgramBaseURL   string `json:"deepgram_base_url"`
+	DashScopeAPIKey   string `json:"dashscope_api_key"`
+	DashScopeBaseURL  string `json:"dashscope_base_url"`
+	AzureSpeechKey    string `json:"azure_speech_key"`
 }
 
 func (h *Host) settingsFilePath() (string, error) {
@@ -46,6 +49,7 @@ func defaultSettingsFile() settingsFile {
 			JaRepeatASREngine:         "openrouter",
 			Backtranslate:             "local",
 			ScoreThreshold:            70,
+			AssessmentMode:            "basic",
 			TargetLanguage:            "jp",
 			MyLanguage:                "en",
 			OtherLanguages:            []string{"ja"},
@@ -56,8 +60,8 @@ func defaultSettingsFile() settingsFile {
 			ContinuousTTSRepeat:       true,
 			TTSRepeatDebounceMs:       1500,
 			TTSEngine:                 "openrouter",
-			OpenAITTSModel:            "openai/gpt-4o-mini-tts-2025-12-15",
-			TTSVoiceName:              "coral",
+			OpenAITTSModel:            "google/gemini-3.1-flash-tts-preview",
+			TTSVoiceName:              "Kore",
 			OutputDeviceName:          "CABLE Input",
 			PipelineMode:              "split",
 			APIProvider:               "openrouter",
@@ -91,9 +95,34 @@ func normalizeTTSEngine(v string) string {
 	switch strings.ToLower(strings.TrimSpace(v)) {
 	case "openai":
 		return "openai"
+	case "deepgram":
+		return "deepgram"
+	case "dashscope":
+		return "dashscope"
 	default:
 		return "openrouter"
 	}
+}
+
+// Retired/unsupported TTS model ids that providers now 400 on (a dead OpenRouter
+// snapshot, or models we removed because their voices don't fit). Heal them to the
+// verified OpenRouter-Gemini default so a stale settings.json doesn't break "Hear it".
+func healTTSModel(s settingsFile) settingsFile {
+	switch strings.TrimSpace(s.OpenAITTSModel) {
+	case "openai/gpt-4o-mini-tts-2025-12-15", "gpt-4o-mini-tts-2025-12-15",
+		"hexgrad/kokoro-82m", "mistralai/voxtral-mini-tts-2603":
+		s.TTSEngine = "openrouter"
+		s.OpenAITTSModel = "google/gemini-3.1-flash-tts-preview"
+		s.TTSVoiceName = "Kore"
+	}
+	return s
+}
+
+func normalizeAssessmentMode(v string) string {
+	if strings.ToLower(strings.TrimSpace(v)) == "azure" {
+		return "azure"
+	}
+	return "basic"
 }
 
 func normalizeAPIProvider(v string) string {
@@ -246,17 +275,25 @@ func normalizeSettings(s settingsFile) settingsFile {
 		s.ScoreThreshold = 70
 	}
 	s.ScoreThreshold = clampThreshold(s.ScoreThreshold)
+	s.AssessmentMode = normalizeAssessmentMode(s.AssessmentMode)
+	s.AzureSpeechRegion = strings.TrimSpace(s.AzureSpeechRegion)
 
 	s.OutputDeviceName = strings.TrimSpace(s.OutputDeviceName)
 	if s.OutputDeviceName == "" {
 		s.OutputDeviceName = "CABLE Input"
 	}
 	s.TTSEngine = normalizeTTSEngine(s.TTSEngine)
+	s = healTTSModel(s)
 	if strings.TrimSpace(s.OpenAITTSModel) == "" {
-		if s.TTSEngine == "openai" {
-			s.OpenAITTSModel = "gpt-4o-mini-tts-2025-12-15"
-		} else {
-			s.OpenAITTSModel = "openai/gpt-4o-mini-tts-2025-12-15"
+		switch s.TTSEngine {
+		case "openai":
+			s.OpenAITTSModel = "gpt-4o-mini-tts"
+		case "deepgram":
+			s.OpenAITTSModel = "aura-2-thalia-en"
+		case "dashscope":
+			s.OpenAITTSModel = "qwen3-tts-flash"
+		default:
+			s.OpenAITTSModel = "google/gemini-3.1-flash-tts-preview"
 		}
 	}
 	s.TTSVoiceName = strings.TrimSpace(s.TTSVoiceName)
@@ -316,6 +353,8 @@ type settingsPublicJSON struct {
 	JaRepeatASREngine         string                    `json:"ja_repeat_asr_engine"`
 	Backtranslate             string                    `json:"backtranslate"`
 	ScoreThreshold            int                       `json:"score_threshold"`
+	AssessmentMode            string                    `json:"assessment_mode"`
+	AzureSpeechRegion         string                    `json:"azure_speech_region"`
 	OutputDeviceName          string                    `json:"output_device_name"`
 	TTSEngine                 string                    `json:"tts_engine"`
 	OpenAITTSModel            string                    `json:"openai_tts_model"`
@@ -354,6 +393,8 @@ type settingsPostJSON struct {
 	JaRepeatASREngine         string          `json:"ja_repeat_asr_engine"`
 	Backtranslate             string          `json:"backtranslate"`
 	ScoreThreshold            int             `json:"score_threshold"`
+	AssessmentMode            string          `json:"assessment_mode"`
+	AzureSpeechRegion         string          `json:"azure_speech_region"`
 	OutputDeviceName          string          `json:"output_device_name"`
 	TTSEngine                 string          `json:"tts_engine"`
 	OpenAITTSModel            string          `json:"openai_tts_model"`
@@ -400,6 +441,8 @@ func (h *Host) toPublicJSON(s settingsFile) settingsPublicJSON {
 		JaRepeatASREngine:         s.JaRepeatASREngine,
 		Backtranslate:             s.Backtranslate,
 		ScoreThreshold:            s.ScoreThreshold,
+		AssessmentMode:            s.AssessmentMode,
+		AzureSpeechRegion:         s.AzureSpeechRegion,
 		OutputDeviceName:          s.OutputDeviceName,
 		TTSEngine:                 s.TTSEngine,
 		OpenAITTSModel:            s.OpenAITTSModel,
@@ -516,6 +559,12 @@ func applyMicTranslatePatch(next *settingsFile, in settingsPostJSON) {
 	if in.ScoreThreshold != 0 {
 		next.ScoreThreshold = clampThreshold(in.ScoreThreshold)
 	}
+	if in.AssessmentMode != "" {
+		next.AssessmentMode = normalizeAssessmentMode(in.AssessmentMode)
+	}
+	if rg := strings.TrimSpace(in.AzureSpeechRegion); rg != "" {
+		next.AzureSpeechRegion = rg
+	}
 	if name := strings.TrimSpace(in.OutputDeviceName); name != "" {
 		next.OutputDeviceName = name
 	}
@@ -525,7 +574,9 @@ func applyMicTranslatePatch(next *settingsFile, in settingsPostJSON) {
 	if m := strings.TrimSpace(in.OpenAITTSModel); m != "" {
 		next.OpenAITTSModel = m
 	}
-	next.TTSVoiceName = strings.TrimSpace(in.TTSVoiceName)
+	if v := strings.TrimSpace(in.TTSVoiceName); v != "" {
+		next.TTSVoiceName = v
+	}
 	next.OpenAITTSInstructions = strings.TrimSpace(in.OpenAITTSInstructions)
 	if tl := strings.TrimSpace(in.TargetLanguage); tl != "" {
 		next.TargetLanguage = languages.NormalizeID(tl)

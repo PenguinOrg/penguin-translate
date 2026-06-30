@@ -29,6 +29,17 @@ export function createPracticeStore(ctx) {
     for (const t of tokens) { if (!t || !t.surface) continue; out += t.reading ? '<ruby>' + esc(t.surface) + '<rt>' + esc(t.reading) + '</rt></ruby>' : esc(t.surface); }
     return out || esc(text);
   }
+  // Azure scores per word: render the recognized text colouring each word green
+  // (good) or red (mispronounced / wrong) from its accuracy + error type.
+  function azureWordsHTML(words, fallback) {
+    if (!Array.isArray(words) || !words.length) return esc(fallback || '');
+    return words.map((w) => {
+      if (!w || !w.word) return '';
+      const acc = Number(w.accuracy || 0);
+      const bad = (w.error_type && w.error_type !== 'None') || acc < 60;
+      return '<span class="' + (bad ? 'miss' : 'hit') + '" title="' + esc(String(Math.round(acc))) + '%">' + esc(w.word) + '</span>';
+    }).join('');
+  }
   // Render the spoken transcript with the server's matched character ranges wrapped in <span class="hit">.
   function highlightedSpoken(base, ranges) {
     const chars = [...String(base || '')];
@@ -102,15 +113,16 @@ export function createPracticeStore(ctx) {
   // The default practiced language = first scoreable output language.
   function firstScoreable() { return (Alpine.store('langs')?.others || []).find((o) => SCOREABLE[o]) || ''; }
 
-  let readyFor = '';   // profile id we've already armed practice mode for
+  // Arm practice mode for a target and refresh the threshold + assessment mode.
+  // The server scores by practice.target_language (not the request body), so this
+  // must run before scoring; it's cheap and idempotent, so it runs each attempt.
   async function ensureReady(target) {
     if (!target) return false;
-    if (readyFor === target.profile) return true;
     try {
       const s = await postJSON('/api/settings', { practice: { practice_enabled: true, target_language: target.profile } }, 'POST /api/settings');
       const p = s.practice || {};
       if (Number(p.score_threshold) > 0) S().threshold = Number(p.score_threshold);
-      readyFor = target.profile;
+      S().assessmentMode = (p.assessment_mode === 'azure') ? 'azure' : 'basic';
       return true;
     } catch (e) { ctx.Toasts?.push?.({ title: tt('practice.title'), msg: e?.message || String(e) }); return false; }
   }
@@ -121,13 +133,15 @@ export function createPracticeStore(ctx) {
     english: '',
     recording: false,
     busy: false,
+    ttsBusy: false,
     status: '',
     activeTargetId: '', // set when practicing a specific conversation turn; else first scoreable
+    assessmentMode: 'basic', // 'basic' (local match) | 'azure' (pronunciation assessment)
     // current phrase
     target: '',
     tokens: [],
     // last score
-    score: { has: false, value: 0, accepted: false },
+    score: { has: false, value: 0, accepted: false, sub: null },
     spokenHTML: '',
     attempts: [],
     heard: { text: '', detected: '', engine: '' }, // what the ASR returned + which backend
@@ -146,6 +160,19 @@ export function createPracticeStore(ctx) {
     get thresholdLabel() { return tt('practice.threshold', { n: this.threshold }); },
     get hasHeard() { return !!(this.heard.engine || this.heard.text); },
     get heardLine() { const h = this.heard; const parts = []; if (h.engine) parts.push(h.engine); if (h.detected) parts.push(h.detected); return parts.join(' · '); },
+    get isAzure() { return this.assessmentMode === 'azure'; },
+    get canHear() { return this.hasPhrase && !this.ttsBusy && !this.recording; },
+    // Per-dimension bars for the Azure "proper" result (prosody only when present).
+    get subBars() {
+      const s = this.score.sub; if (!s) return [];
+      const out = [
+        { key: 'accuracy', label: tt('practice.subAccuracy'), value: Math.round(Number(s.accuracy || 0)) },
+        { key: 'fluency', label: tt('practice.subFluency'), value: Math.round(Number(s.fluency || 0)) },
+        { key: 'completeness', label: tt('practice.subCompleteness'), value: Math.round(Number(s.completeness || 0)) },
+      ];
+      if (Number(s.prosody) > 0) out.push({ key: 'prosody', label: tt('practice.subProsody'), value: Math.round(Number(s.prosody)) });
+      return out;
+    },
     ringStyle() {
       const v = Math.max(0, Math.min(100, this.score.value));
       const col = this.score.accepted ? 'var(--ok)' : 'var(--warn)';
@@ -182,6 +209,24 @@ export function createPracticeStore(ctx) {
       } finally { this.busy = false; }
     },
 
+    // Hear the target phrase spoken by a native TTS voice. Plays in-page (the
+    // user's own output) via /api/tts — NOT the server-side Speak output route.
+    async playTarget() {
+      if (!this.hasPhrase || this.ttsBusy || this.recording) return;
+      this.ttsBusy = true;
+      try {
+        const r = await fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: this.target }) });
+        if (!r.ok) throw new Error(await httpErrorMessage(r, 'POST /api/tts'));
+        const buf = await r.arrayBuffer();
+        const url = URL.createObjectURL(new Blob([buf], { type: r.headers.get('Content-Type') || 'audio/wav' }));
+        const audio = new Audio(url);
+        audio.onended = audio.onerror = () => URL.revokeObjectURL(url);
+        await audio.play();
+      } catch (e) {
+        ctx.Toasts?.push?.({ title: tt('practice.ttsFailed'), msg: e?.message || String(e) });
+      } finally { this.ttsBusy = false; }
+    },
+
     // Hold-to-record (press the mic, speak, release to score). Uses its OWN mic
     // stream and pauses the conversation mic so the attempt never reaches the
     // main translate flow.
@@ -209,27 +254,57 @@ export function createPracticeStore(ctx) {
       if (pcm.length < 16000 * 0.3) { this.status = tt('practice.tooShort'); return; } // <0.3s captured
       this.busy = true; this.status = tt('practice.statusScoring');
       try {
-        const tr = await transcribe(buildWav(pcm), t.asr);
-        const spoken = (tr.text || '').trim();
-        this.heard = { text: spoken, detected: tr.detected_language || '', engine: tr.asr_engine || '' };
-        if (!spoken) {
-          // ASR returned nothing — the most common real cause of a 0%. Say so
-          // instead of scoring an empty string against the target.
-          this.score = { has: false, value: 0, accepted: false }; this.spokenHTML = '';
-          this.status = tt('practice.noSpeech', { engine: this.heard.engine || tt('practice.unknownEngine') });
-          return;
-        }
-        const sc = await postScore(this.target, spoken, t.furigana ? this.tokens : []);
-        const value = Number(sc.score || 0), accepted = !!sc.accepted;
-        const base = typeof sc.spoken_highlight_base === 'string' && sc.spoken_highlight_base ? sc.spoken_highlight_base : spoken;
-        this.spokenHTML = highlightedSpoken(base, sc.spoken_match_ranges) || esc(spoken || '');
-        this.score = { has: true, value, accepted };
-        this.attempts = [...this.attempts, { value, accepted }];
-        this.status = accepted ? tt('practice.passed') : tt('practice.statusRetry', { n: this.threshold });
+        const wav = buildWav(pcm);
+        if (this.isAzure) await this._assessAzure(wav, t);
+        else await this._scoreBasic(wav, t);
       } catch (e) {
         ctx.Toasts?.push?.({ title: tt('practice.scoreFailed'), msg: e?.message || String(e) });
         this.status = e?.message || String(e);
       } finally { this.busy = false; }
+    },
+    // Basic scorer: cloud ASR → local string-match score.
+    async _scoreBasic(wav, t) {
+      const tr = await transcribe(wav, t.asr);
+      const spoken = (tr.text || '').trim();
+      this.heard = { text: spoken, detected: tr.detected_language || '', engine: tr.asr_engine || '' };
+      if (!spoken) {
+        // ASR returned nothing — the most common real cause of a 0%. Say so
+        // instead of scoring an empty string against the target.
+        this.score = { has: false, value: 0, accepted: false, sub: null }; this.spokenHTML = '';
+        this.status = tt('practice.noSpeech', { engine: this.heard.engine || tt('practice.unknownEngine') });
+        return;
+      }
+      const sc = await postScore(this.target, spoken, t.furigana ? this.tokens : []);
+      const value = Number(sc.score || 0), accepted = !!sc.accepted;
+      const base = typeof sc.spoken_highlight_base === 'string' && sc.spoken_highlight_base ? sc.spoken_highlight_base : spoken;
+      this.spokenHTML = highlightedSpoken(base, sc.spoken_match_ranges) || esc(spoken || '');
+      this.score = { has: true, value, accepted, sub: null };
+      this.attempts = [...this.attempts, { value, accepted }];
+      this.status = accepted ? tt('practice.passed') : tt('practice.statusRetry', { n: this.threshold });
+    },
+    // Azure scorer: one call does ASR + phoneme-level pronunciation assessment,
+    // returning per-dimension sub-scores and per-word accuracy/error types.
+    async _assessAzure(wav, t) {
+      const fd = new FormData();
+      fd.append('file', wav, 'clip.wav');
+      fd.append('language', t.asr);
+      fd.append('expected', this.target);
+      fd.append('threshold', String(this.threshold || 0));
+      const r = await fetch('/api/assess', { method: 'POST', body: fd });
+      if (!r.ok) throw new Error(await httpErrorMessage(r, 'POST /api/assess'));
+      const a = await r.json();
+      const spoken = (a.recognized_text || '').trim();
+      this.heard = { text: spoken, detected: t.id, engine: 'Azure' };
+      if (!spoken) {
+        this.score = { has: false, value: 0, accepted: false, sub: null }; this.spokenHTML = '';
+        this.status = tt('practice.noSpeech', { engine: 'Azure' });
+        return;
+      }
+      const value = Math.round(Number(a.score || 0)), accepted = !!a.accepted;
+      this.spokenHTML = azureWordsHTML(a.words || [], spoken);
+      this.score = { has: true, value, accepted, sub: a.sub || null };
+      this.attempts = [...this.attempts, { value, accepted }];
+      this.status = accepted ? tt('practice.passed') : tt('practice.statusRetry', { n: this.threshold });
     },
     setThreshold(v) {
       const n = Math.max(1, Math.min(100, Number(v) || 0));
@@ -272,12 +347,11 @@ export function createPracticeStore(ctx) {
       this._clearScore(); this.status = tt('practice.statusReady');
       Alpine.nextTick(() => { const el = document.getElementById('ppEnglish'); if (el) el.focus(); });
     },
-    _clearScore() { this.score = { has: false, value: 0, accepted: false }; this.spokenHTML = ''; this.heard = { text: '', detected: '', engine: '' }; },
+    _clearScore() { this.score = { has: false, value: 0, accepted: false, sub: null }; this.spokenHTML = ''; this.heard = { text: '', detected: '', engine: '' }; },
 
     init() {
-      // Re-resolving target is reactive via getters; nothing to poll. Reset the
-      // armed-mode cache when languages change so a new target re-arms scoring.
-      document.addEventListener('langschange', () => { readyFor = ''; });
+      // Re-resolving target is reactive via getters; threshold + assessment mode
+      // are refreshed by ensureReady on every open/target-change/attempt.
     },
   };
   return store;

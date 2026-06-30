@@ -29,7 +29,11 @@
 .pp-en-row button { flex-shrink: 0; padding: 0.3rem 0.6rem; }
 
 .pp-target { border: 1px solid var(--border-strong); border-radius: var(--r-m); background: linear-gradient(180deg, var(--accent-soft), transparent 60%), var(--surface); padding: 12px 12px 14px; }
-.pp-target-tag { font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--accent); margin-bottom: 8px; }
+.pp-target-tag { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--accent); margin-bottom: 8px; }
+.pp-tts { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; background: transparent; border: 1px solid var(--border-strong); color: var(--muted); font-size: 13px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
+.pp-tts:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.pp-tts:disabled { opacity: 0.4; cursor: not-allowed; }
+.pp-tts.busy { animation: pp-pulse 1s ease-in-out infinite; }
 .pp-target-text { font-size: 24px; line-height: 1.55; color: var(--text-bright); word-break: break-word; }
 .pp-target-text:empty::before { content: "—"; color: var(--faint); }
 .pp-target-text.lang-zh { font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", system-ui, sans-serif; }
@@ -60,6 +64,22 @@
 
 .pp-said-text { font-size: 1.05rem; line-height: 1.7; color: var(--muted); word-break: break-word; }
 .pp-said-text .hit { color: var(--text-bright); background: rgba(61, 201, 127, 0.16); border-radius: 5px; box-decoration-break: clone; -webkit-box-decoration-break: clone; padding: 1px 3px; }
+.pp-said-text .miss { color: #f0c49a; background: rgba(214, 142, 70, 0.16); border-radius: 5px; box-decoration-break: clone; -webkit-box-decoration-break: clone; padding: 1px 3px; }
+
+/* Azure pronunciation-assessment breakdown — bars replace the ring in azure mode. */
+.pp-score.azure { flex-direction: column; align-items: stretch; gap: 11px; }
+.pp-azure-head { display: flex; align-items: center; gap: 12px; }
+.pp-azure-overall { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pp-score.azure.ok .pp-azure-overall { color: #9df0c0; }
+.pp-score.azure.bad .pp-azure-overall { color: #f0c49a; }
+.pp-azure-meta { display: flex; flex-direction: column; min-width: 0; }
+.pp-bars { display: flex; flex-direction: column; gap: 7px; }
+.pp-bar { display: grid; grid-template-columns: 88px 1fr 38px; align-items: center; gap: 8px; }
+.pp-bar-l { font-size: 0.72rem; color: var(--muted); }
+.pp-bar-track { height: 7px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+.pp-bar-track > i { display: block; height: 100%; border-radius: 999px; background: var(--ok); transition: width 0.25s ease; }
+.pp-bar-track > i.bad { background: var(--warn); }
+.pp-bar-v { font-size: 0.72rem; color: var(--faint); text-align: right; font-variant-numeric: tabular-nums; }
 
 .pp-rec-row { display: flex; gap: 8px; }
 .pp-rec-row .pp-rec { flex: 1; width: auto; }

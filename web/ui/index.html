@@ -261,7 +261,11 @@
               </div>
             </div>
             <div class="pp-target">
-              <div class="pp-target-tag" x-text="$store.i18n.t('practice.sayThis') + ' · ' + $store.practice.targetLabel"></div>
+              <div class="pp-target-tag">
+                <span x-text="$store.i18n.t('practice.sayThis') + ' · ' + $store.practice.targetLabel"></span>
+                <button type="button" class="pp-tts" :class="{ busy: $store.practice.ttsBusy }" :disabled="!$store.practice.canHear"
+                        :title="$store.i18n.t('practice.hearIt')" :aria-label="$store.i18n.t('practice.hearIt')" @click="$store.practice.playTarget()">🔊</button>
+              </div>
               <div class="pp-target-text" :class="$store.practice.targetCls" x-html="$store.practice.targetHTML"></div>
             </div>
             <div class="pp-rec-row">
@@ -283,7 +287,7 @@
                 <span class="pp-heard" :title="$store.practice.heard.text" x-text="$store.i18n.t('practice.heardVia', { info: $store.practice.heardLine })"></span>
               </template>
             </div>
-            <template x-if="$store.practice.score.has">
+            <template x-if="$store.practice.score.has && !$store.practice.score.sub">
               <div class="pp-score" :class="$store.practice.score.accepted ? 'ok' : 'bad'">
                 <div class="pp-ring" :style="$store.practice.ringStyle()"><span x-text="$store.practice.score.value + '%'"></span></div>
                 <div class="pp-score-meta">
@@ -292,6 +296,26 @@
                   <div class="pp-dots">
                     <template x-for="(a, ai) in $store.practice.attempts" :key="ai"><i :class="a.accepted ? 'ok' : 'bad'"></i></template>
                   </div>
+                </div>
+              </div>
+            </template>
+            <template x-if="$store.practice.score.has && $store.practice.score.sub">
+              <div class="pp-score azure" :class="$store.practice.score.accepted ? 'ok' : 'bad'">
+                <div class="pp-azure-head">
+                  <span class="pp-azure-overall" x-text="$store.practice.score.value + '%'"></span>
+                  <span class="pp-azure-meta"><span class="pp-verdict" x-text="$store.practice.verdict"></span><span class="pp-threshold" x-text="$store.practice.thresholdLabel"></span></span>
+                </div>
+                <div class="pp-bars">
+                  <template x-for="b in $store.practice.subBars" :key="b.key">
+                    <div class="pp-bar">
+                      <span class="pp-bar-l" x-text="b.label"></span>
+                      <span class="pp-bar-track"><i :class="$store.practice.score.accepted ? 'ok' : 'bad'" :style="'width:' + b.value + '%'"></i></span>
+                      <span class="pp-bar-v" x-text="b.value + '%'"></span>
+                    </div>
+                  </template>
+                </div>
+                <div class="pp-dots">
+                  <template x-for="(a, ai) in $store.practice.attempts" :key="ai"><i :class="a.accepted ? 'ok' : 'bad'"></i></template>
                 </div>
               </div>
             </template>
@@ -544,7 +568,71 @@
                 </template>
               </fieldset>
               <fieldset>
-                <legend x-text="$store.i18n.t('prefs.prac.scoreLegend')"></legend>
+                <legend x-text="$store.i18n.t('prefs.prac.ttsLegend')"></legend>
+                <div class="field">
+                  <label x-text="$store.i18n.t('prefs.prac.ttsProvider')"></label>
+                  <select @change="s.setTtsEngine($event.target.value)">
+                    <template x-for="o in s.ttsProviderOpts" :key="o.v"><option :value="o.v" :selected="o.v === s.ttsEngine" x-text="o.t"></option></template>
+                  </select>
+                </div>
+                <div class="field">
+                  <label x-text="$store.i18n.t('prefs.prac.ttsModel')"></label>
+                  <select @change="s.save({ practice: { openai_tts_model: $event.target.value } })">
+                    <template x-for="o in s.opts(s.practiceTtsModelOpts, practice.openai_tts_model)" :key="o.v"><option :value="o.v" :selected="o.v === (practice.openai_tts_model || s.practiceTtsModelOpts[0].v)" x-text="o.t"></option></template>
+                  </select>
+                </div>
+                <template x-if="s.ttsHasVoice">
+                  <div class="field">
+                    <label x-text="$store.i18n.t('prefs.prac.voice')"></label>
+                    <select @change="s.save({ practice: { tts_voice_name: $event.target.value } })">
+                      <template x-for="o in s.ttsVoiceOpts" :key="o.v"><option :value="o.v" :selected="o.v === practice.tts_voice_name" x-text="o.t"></option></template>
+                    </select>
+                  </div>
+                </template>
+                <template x-if="s.ttsEngine === 'openai'">
+                  <div class="field"><label x-text="$store.i18n.t('prefs.inf.openaiKey')"></label>
+                    <div class="key-row"><input type="text" autocomplete="off" spellcheck="false" placeholder="sk-…" :value="settings.openai_api_key || ''" @change="s.save({ openai_api_key: $event.target.value.trim() })"><button class="key-remove" @click="s.removeKey('openai')" x-text="$store.i18n.t('common.remove')"></button></div>
+                  </div>
+                </template>
+                <template x-if="s.ttsEngine === 'openrouter'">
+                  <div class="field"><label x-text="$store.i18n.t('prefs.inf.openrouterKey')"></label>
+                    <div class="key-row"><input type="text" autocomplete="off" spellcheck="false" placeholder="sk-or-…" :value="settings.openrouter_api_key || ''" @change="s.save({ openrouter_api_key: $event.target.value.trim() })"><button class="key-remove" @click="s.removeKey('openrouter')" x-text="$store.i18n.t('common.remove')"></button></div>
+                  </div>
+                </template>
+                <template x-if="s.ttsEngine === 'deepgram'">
+                  <div class="field"><label x-text="$store.i18n.t('prefs.cap.deepgramKey')"></label>
+                    <div class="key-row"><input type="text" autocomplete="off" spellcheck="false" placeholder="Deepgram API key" :value="settings.deepgram_api_key || ''" @change="s.save({ deepgram_api_key: $event.target.value.trim() })"><button class="key-remove" @click="s.removeKey('deepgram')" x-text="$store.i18n.t('common.remove')"></button></div>
+                  </div>
+                </template>
+                <template x-if="s.ttsEngine === 'dashscope'">
+                  <div class="field"><label x-text="$store.i18n.t('prefs.prac.dashscopeKey')"></label>
+                    <div class="key-row"><input type="text" autocomplete="off" spellcheck="false" placeholder="DashScope API key" :value="settings.dashscope_api_key || ''" @change="s.save({ dashscope_api_key: $event.target.value.trim() })"><button class="key-remove" @click="s.removeKey('dashscope')" x-text="$store.i18n.t('common.remove')"></button></div>
+                  </div>
+                </template>
+                <p class="hint" x-text="$store.i18n.t('prefs.prac.ttsHint')"></p>
+              </fieldset>
+              <fieldset>
+                <legend x-text="$store.i18n.t('prefs.prac.assessLegend')"></legend>
+                <div class="field">
+                  <label x-text="$store.i18n.t('prefs.prac.assessMode')"></label>
+                  <select @change="s.save({ practice: { assessment_mode: $event.target.value } })">
+                    <template x-for="o in s.assessmentModeOpts" :key="o.v"><option :value="o.v" :selected="o.v === s.assessmentMode" x-text="o.t"></option></template>
+                  </select>
+                  <p class="hint" x-text="$store.i18n.t('prefs.prac.assessHint')"></p>
+                </div>
+                <template x-if="s.assessmentMode === 'azure'">
+                  <div style="display:contents">
+                    <div class="field">
+                      <label x-text="$store.i18n.t('prefs.prac.azureRegion')"></label>
+                      <input type="text" autocomplete="off" spellcheck="false" placeholder="eastus" :value="practice.azure_speech_region || ''" @change="s.save({ practice: { azure_speech_region: $event.target.value.trim() } })">
+                    </div>
+                    <div class="field">
+                      <label x-text="$store.i18n.t('prefs.prac.azureKey')"></label>
+                      <div class="key-row"><input type="text" autocomplete="off" spellcheck="false" placeholder="Azure Speech key" :value="settings.azure_speech_key || ''" @change="s.save({ azure_speech_key: $event.target.value.trim() })"><button class="key-remove" @click="s.removeKey('azure')" x-text="$store.i18n.t('common.remove')"></button></div>
+                      <p class="hint" x-text="$store.i18n.t('prefs.prac.azureHint')"></p>
+                    </div>
+                  </div>
+                </template>
                 <div class="field">
                   <label x-text="$store.i18n.t('prefs.prac.passMark')"></label>
                   <select @change="s.save({ practice: { score_threshold: Number($event.target.value) } })">

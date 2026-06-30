@@ -49,6 +49,8 @@ func (h *Host) MountRoutes(mux *http.ServeMux) {
 
 	mux.HandleFunc("/api/score", h.handleScore)
 	mux.HandleFunc("/api/score-ja", h.handleScore)
+	mux.HandleFunc("/api/assess", h.handleAssess)
+	mux.HandleFunc("/api/tts", h.handlePracticeTTS)
 	mux.HandleFunc("/api/play-wav", h.handlePlayWav)
 	mux.HandleFunc("/api/speak-tts", h.handleSpeakTTS)
 
