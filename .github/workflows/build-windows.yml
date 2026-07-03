@@ -35,13 +35,6 @@ jobs:
         with:
           workspaces: |
             runtime/overlay
-            runtime/denoise
-
-      - name: Rust tests (denoise)
-        shell: pwsh
-        run: |
-          cargo test --release --manifest-path runtime/denoise/Cargo.toml
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Go quality gates (gofmt, vet, test)
         shell: pwsh

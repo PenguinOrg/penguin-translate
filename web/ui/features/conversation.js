@@ -67,12 +67,12 @@ export function createConversationStore(ctx) {
   }
   const incomingHint = () => (otherLangs.length === 1 ? lang(otherLangs[0]).asr_code : '');
 
-  const cfg = { desktopOverlay: false, openvr: false, diarize: false, denoise: true };
+  const cfg = { desktopOverlay: false, openvr: false, diarize: false };
   async function refreshCfg() {
     try {
       const a = (await (await fetch('/api/settings')).json()).audio || {};
       cfg.desktopOverlay = !!a.desktop_overlay_enabled; cfg.openvr = !!a.openvr_overlay_enabled;
-      cfg.diarize = !!a.diarize_by_default; cfg.denoise = a.denoise_enabled !== false;
+      cfg.diarize = !!a.diarize_by_default;
       detMode = a.speech_detection || 'streaming';
       if (Number(a.vad_sensitivity)) vadPct = Number(a.vad_sensitivity);
       if (Number(a.clip_max_sec) > 0) clipMaxSec = Number(a.clip_max_sec);
@@ -313,7 +313,7 @@ export function createConversationStore(ctx) {
       syncOverlaysFromSettings().catch(() => {});
       await populateMics().catch(() => {});
       await populateOutputs().catch(() => {});
-      document.addEventListener('audioprefschange', (e) => { const d = e.detail || {}; if (Number(d.vad_sensitivity) > 0) vadPct = Number(d.vad_sensitivity); if (typeof d.denoise_enabled === 'boolean') cfg.denoise = d.denoise_enabled; if (typeof d.speech_detection === 'string' && d.speech_detection !== detMode) { detMode = d.speech_detection; if (S().listening) restartLanes(); } if (Number(d.clip_max_sec) > 0) clipMaxSec = Number(d.clip_max_sec); });
+      document.addEventListener('audioprefschange', (e) => { const d = e.detail || {}; if (Number(d.vad_sensitivity) > 0) vadPct = Number(d.vad_sensitivity); if (typeof d.speech_detection === 'string' && d.speech_detection !== detMode) { detMode = d.speech_detection; if (S().listening) restartLanes(); } if (Number(d.clip_max_sec) > 0) clipMaxSec = Number(d.clip_max_sec); });
       setStatus(tt('conv.statusIdle'));
     },
   };

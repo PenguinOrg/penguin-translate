@@ -76,7 +76,7 @@ const SOURCES = {
     desc: "Per-caption latency across the Go host and the Rust overlay subprocess, joined by request id.",
     endpoint: "/api/overlay/timings", stream: "/api/overlay/timings/stream",
     sides: [
-      { key: "go",   label: "Go host",      stages: ["receive", "denoise", "transcribe", "translate", "ipc_write"] },
+      { key: "go",   label: "Go host",      stages: ["receive", "transcribe", "translate", "ipc_write"] },
       { key: "rust", label: "Rust overlay", stages: ["deserialize", "queue", "layout", "render", "present"] },
     ],
     histNote: "red = Go host (capture→IPC), green = Rust overlay (render→present)",
@@ -96,7 +96,7 @@ const SOURCES = {
 // Stable color per stage name (shared across both sources; names that collide
 // across sources are never shown together, since only one source is active).
 const COLORS = {
-  receive: "#5b8cff", denoise: "#7a6bff", transcribe: "#e8606f", translate: "#eeb04e",
+  receive: "#5b8cff", transcribe: "#e8606f", translate: "#eeb04e",
   ipc_write: "#3dc97f", deserialize: "#48b6c9", queue: "#9aa0a6", layout: "#c98fd6",
   render: "#5bd0a0", present: "#e0925b",
   capture: "#5b8cff", framehash: "#9aa0a6", ocr: "#e8606f", resolve: "#48b6c9",

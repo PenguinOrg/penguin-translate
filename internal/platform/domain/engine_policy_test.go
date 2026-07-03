@@ -207,7 +207,6 @@ func TestRequiresManagedEngine(t *testing.T) {
 				Audio: AudioSettings{
 					PipelineMode:   "split",
 					TranslateModel: "gpt-4o-mini",
-					DenoiseEnabled: true,
 				},
 			},
 			want: false,

@@ -95,8 +95,6 @@ type AudioSettings struct {
 	ContextEnabled             bool    `json:"context_enabled"`
 	ContextHint                string  `json:"context_hint"`
 	ChunkProfile               string  `json:"chunk_profile"`
-	DenoiseEnabled             bool    `json:"denoise_enabled"`
-	DenoiseDebug               bool    `json:"denoise_debug"`
 	OpenVROverlayEnabled       bool    `json:"openvr_overlay_enabled"`
 	DesktopOverlayEnabled      bool    `json:"desktop_overlay_enabled"`
 	DesktopOverlayWidth        int     `json:"desktop_overlay_width"`
@@ -178,7 +176,6 @@ func DefaultSettings(engineBaseURL string) Settings {
 			MultimodalModel:            "xiaomi/mimo-v2-flash",
 			PrimaryLanguage:            "ja",
 			ChunkProfile:               "sentence",
-			DenoiseEnabled:             true,
 			DesktopOverlayWidth:        1280,
 			DesktopOverlayFontScale:    1.0,
 			DesktopOverlayAlign:        "center",

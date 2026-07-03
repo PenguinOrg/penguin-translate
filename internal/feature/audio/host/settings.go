@@ -32,7 +32,6 @@ func defaultSettingsFile() settingsFile {
 			MultimodalModel:            "xiaomi/mimo-v2-flash",
 			PrimaryLanguage:            "ja",
 			ChunkProfile:               "sentence",
-			DenoiseEnabled:             true,
 			DesktopOverlayWidth:        1280,
 			DesktopOverlayFontScale:    1.0,
 			DesktopOverlayAlign:        "center",
@@ -239,8 +238,6 @@ type settingsPublicJSON struct {
 	ContextEnabled             bool    `json:"context_enabled"`
 	ContextHint                string  `json:"context_hint"`
 	ChunkProfile               string  `json:"chunk_profile"`
-	DenoiseEnabled             bool    `json:"denoise_enabled"`
-	DenoiseDebug               bool    `json:"denoise_debug"`
 	OpenVROverlayEnabled       bool    `json:"openvr_overlay_enabled"`
 	DesktopOverlayEnabled      bool    `json:"desktop_overlay_enabled"`
 	DesktopOverlayWidth        int     `json:"desktop_overlay_width"`
@@ -276,8 +273,6 @@ type settingsPostJSON struct {
 	ContextEnabled             bool    `json:"context_enabled"`
 	ContextHint                string  `json:"context_hint"`
 	ChunkProfile               string  `json:"chunk_profile"`
-	DenoiseEnabled             bool    `json:"denoise_enabled"`
-	DenoiseDebug               bool    `json:"denoise_debug"`
 	OpenVROverlayEnabled       bool    `json:"openvr_overlay_enabled"`
 	DesktopOverlayEnabled      bool    `json:"desktop_overlay_enabled"`
 	DesktopOverlayWidth        int     `json:"desktop_overlay_width"`
@@ -326,8 +321,6 @@ func toSettingsPublicJSON(s settingsFile) settingsPublicJSON {
 		ContextEnabled:             s.ContextEnabled,
 		ContextHint:                s.ContextHint,
 		ChunkProfile:               s.ChunkProfile,
-		DenoiseEnabled:             s.DenoiseEnabled,
-		DenoiseDebug:               s.DenoiseDebug,
 		OpenVROverlayEnabled:       s.OpenVROverlayEnabled,
 		DesktopOverlayEnabled:      s.DesktopOverlayEnabled,
 		DesktopOverlayWidth:        s.DesktopOverlayWidth,
@@ -463,12 +456,6 @@ func applyAudioPatch(next *settingsFile, in settingsPostJSON, body []byte) {
 	}
 	if in.SessionActive != nil {
 		next.SessionActive = *in.SessionActive
-	}
-	if bodyHasKey(body, "denoise_enabled") {
-		next.DenoiseEnabled = in.DenoiseEnabled
-	}
-	if bodyHasKey(body, "denoise_debug") {
-		next.DenoiseDebug = in.DenoiseDebug
 	}
 	if bodyHasKey(body, "openvr_overlay_enabled") {
 		next.OpenVROverlayEnabled = in.OpenVROverlayEnabled

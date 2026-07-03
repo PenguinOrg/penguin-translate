@@ -1,5 +1,5 @@
 #Requires -Version 5.1
-# Release build: builds the Rust sidecars (overlay + denoise), embeds them into
+# Release build: builds the Rust overlay sidecar, embeds it into
 # the Go binary with the Windows icon/manifest, and produces the release exe.
 [CmdletBinding()]
 param(
@@ -15,8 +15,6 @@ $ErrorActionPreference = "Stop"
 $RepoRoot     = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $OverlayDir   = Join-Path $RepoRoot "runtime\overlay"
 $OverlayEmbed = Join-Path $RepoRoot "internal\platform\overlaybinary\penguin-translate-overlay.exe"
-$DenoiseDir   = Join-Path $RepoRoot "runtime\denoise"
-$DenoiseEmbed = Join-Path $RepoRoot "internal\platform\denoisebinary\penguin-translate-denoise.exe"
 if (-not $OutDir) { $OutDir = Join-Path $RepoRoot "build" }
 $OutExe       = Join-Path $OutDir "penguin-translate.exe"
 $AppIconPng   = Join-Path $RepoRoot "build\appicon.png"
@@ -57,8 +55,7 @@ function Stop-RunningTranslationOverlay {
     param([string]$Reason = "pre-build")
     $images = @(
         "penguin-translate.exe",
-        "penguin-translate-overlay.exe",
-        "penguin-translate-denoise.exe"
+        "penguin-translate-overlay.exe"
     )
     $names = $images | ForEach-Object { $_ -replace '\.exe$','' }
     # taskkill.exe costs ~2s per call even on no match (walks the whole process
@@ -164,13 +161,11 @@ function Build-RustSidecar {
 function Invoke-GoRelease {
     param(
         [string]$CgoEnabled = "0",
-        [bool]$OverlayEmbedded = $false,
-        [bool]$DenoiseEmbedded = $false
+        [bool]$OverlayEmbedded = $false
     )
     # Same tags as `wails build` production.
     $wailsTags = "desktop,production,wv2runtime.download"
     if ($OverlayEmbedded) { $wailsTags += ",overlay_embedded" }
-    if ($DenoiseEmbedded) { $wailsTags += ",denoise_embedded" }
     $env:CGO_ENABLED = $CgoEnabled
     $ld = @(
         "-s", "-w", "-H", "windowsgui",
@@ -190,7 +185,7 @@ try {
     }
     $haveCargo = [bool](Get-Command cargo -ErrorAction SilentlyContinue)
     if (-not $haveCargo) {
-        Write-Warning "cargo not found - desktop caption overlay and noise cancellation will be skipped"
+        Write-Warning "cargo not found - desktop caption overlay will be skipped"
     }
 
     Stop-RunningTranslationOverlay
@@ -206,7 +201,6 @@ try {
     Invoke-Step "Windows resources (icon + manifest)" { Ensure-WindowsResources }
 
     $OverlayEmbedded = $false
-    $DenoiseEmbedded = $false
     if ($haveCargo) {
         Invoke-Step "Rust overlay sidecar (build + embed)" {
             $script:OverlayEmbedded = Build-RustSidecar `
@@ -215,20 +209,13 @@ try {
                 -EmbedPath $OverlayEmbed `
                 -FailureNote "Desktop overlay (Rust) build failed; install MSVC v143 build tools so link.exe is on PATH. Main app still builds; desktop/SteamVR captions unavailable until fixed"
         }
-        Invoke-Step "Rust denoise sidecar (build + embed)" {
-            $script:DenoiseEmbedded = Build-RustSidecar `
-                -CrateDir $DenoiseDir `
-                -BinaryName "penguin-translate-denoise.exe" `
-                -EmbedPath $DenoiseEmbed `
-                -FailureNote "Denoise sidecar (Rust) build failed. Main app still builds; noise cancellation unavailable (audio passes through) until fixed"
-        }
     }
 
     # Portable: the Go binary. CGO stays off (no cgo in the tree; OpenVR lives
     # in the Rust sidecar), so no MinGW toolchain is required.
     Stop-RunningTranslationOverlay -Reason "before go build"
     Invoke-Step "Go build (release)" {
-        Invoke-GoRelease -CgoEnabled "0" -OverlayEmbedded:$OverlayEmbedded -DenoiseEmbedded:$DenoiseEmbedded
+        Invoke-GoRelease -CgoEnabled "0" -OverlayEmbedded:$OverlayEmbedded
     }
 
     if (-not (Test-Path -LiteralPath $OutExe)) {
@@ -236,15 +223,13 @@ try {
     }
     $sizeMb = [math]::Round((Get-Item -LiteralPath $OutExe).Length / 1MB, 2)
     $overlayNote = if ($OverlayEmbedded) { "overlay embedded" } else { "overlay NOT embedded" }
-    $denoiseNote = if ($DenoiseEmbedded) { "denoise embedded" } else { "denoise NOT embedded" }
     Write-Host ""
-    Write-Host "Release: $OutExe ($sizeMb MB, v$Version, icon embedded, $overlayNote, $denoiseNote)" -ForegroundColor Green
+    Write-Host "Release: $OutExe ($sizeMb MB, v$Version, icon embedded, $overlayNote)" -ForegroundColor Green
 
     if ($Test) {
         Invoke-Step "Go tests" {
             $testTags = @()
             if ($OverlayEmbedded) { $testTags += "overlay_embedded" }
-            if ($DenoiseEmbedded) { $testTags += "denoise_embedded" }
             if ($testTags.Count -gt 0) {
                 go test -count=1 ("-tags=" + ($testTags -join ',')) ./internal/platform/... ./internal/composition/...
             } else {

@@ -86,8 +86,6 @@
     "context_enabled": false,
     "context_hint": "",
     "chunk_profile": "sentence",
-    "denoise_enabled": true,
-    "denoise_debug": false,
     "openvr_overlay_enabled": false,
     "desktop_overlay_enabled": false,
     "desktop_overlay_width": 1280,
