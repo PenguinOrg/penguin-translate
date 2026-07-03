@@ -336,8 +336,6 @@ func normalizeSettings(s settingsFile) settingsFile {
 
 type settingsPublicJSON struct {
 	ForwardTranslator         string                    `json:"forward_translator"`
-	OpenAIAPIKey              string                    `json:"openai_api_key"`
-	OpenRouterAPIKey          string                    `json:"openrouter_api_key"`
 	OpenAIKeyConfigured       bool                      `json:"openai_key_configured"`
 	OpenAIBaseURL             string                    `json:"openai_base_url"`
 	OpenAIForwardModel        string                    `json:"openai_forward_model"`
@@ -424,8 +422,6 @@ func (h *Host) toPublicJSON(s settingsFile) settingsPublicJSON {
 	path, _ := h.settingsFilePath()
 	return settingsPublicJSON{
 		ForwardTranslator:         s.ForwardTranslator,
-		OpenAIAPIKey:              s.OpenAIAPIKey,
-		OpenRouterAPIKey:          s.OpenRouterAPIKey,
 		OpenAIKeyConfigured:       strings.TrimSpace(s.OpenAIAPIKey) != "",
 		OpenAIBaseURL:             s.OpenAIBaseURL,
 		OpenAIForwardModel:        s.OpenAIForwardModel,

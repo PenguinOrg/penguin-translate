@@ -76,6 +76,31 @@ func (r *JSONRepository) Save(st domain.Settings) error {
 	return nil
 }
 
+func (r *JSONRepository) Update(mutate func(*domain.Settings) error) (domain.Settings, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var st domain.Settings
+	if r.loaded {
+		st = cloneSettings(r.cached)
+	} else {
+		var err error
+		st, err = r.loadUnlocked()
+		if err != nil {
+			return domain.Settings{}, err
+		}
+	}
+	if err := mutate(&st); err != nil {
+		return domain.Settings{}, err
+	}
+	if err := r.saveUnlocked(st); err != nil {
+		return domain.Settings{}, err
+	}
+	normalize(&st)
+	r.cached = cloneSettings(st)
+	r.loaded = true
+	return cloneSettings(st), nil
+}
+
 func cloneSettings(st domain.Settings) domain.Settings {
 	if st.MicTranslate.Plugins != nil {
 		plugins := make(map[string]json.RawMessage, len(st.MicTranslate.Plugins))
@@ -94,16 +119,36 @@ func cloneSettings(st domain.Settings) domain.Settings {
 	return st
 }
 
+// saveUnlocked writes to a temp file then renames it over the target so a
+// crash mid-write can never leave a truncated settings.json.
 func (r *JSONRepository) saveUnlocked(st domain.Settings) error {
 	normalize(&st)
-	if err := os.MkdirAll(filepath.Dir(r.path), 0o755); err != nil {
+	dir := filepath.Dir(r.path)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
 	b, err := json.MarshalIndent(st, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(r.path, b, 0o600)
+	tmp, err := os.CreateTemp(dir, ".settings-*.tmp")
+	if err != nil {
+		return err
+	}
+	if _, err := tmp.Write(b); err != nil {
+		tmp.Close()
+		os.Remove(tmp.Name())
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		os.Remove(tmp.Name())
+		return err
+	}
+	if err := os.Rename(tmp.Name(), r.path); err != nil {
+		os.Remove(tmp.Name())
+		return err
+	}
+	return nil
 }
 
 var _ port.SettingsRepository = (*JSONRepository)(nil)

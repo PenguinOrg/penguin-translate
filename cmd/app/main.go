@@ -58,7 +58,7 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	inboundhttp.Mount(mux, app)
+	handler := inboundhttp.Mount(mux, app)
 
 	engineCtx, engineStop := context.WithCancel(context.Background())
 	defer func() { shutdownAll(engineStop) }()
@@ -89,7 +89,7 @@ func main() {
 		log.Printf("Penguin Translate %s — HTTP on http://%s (hub: /ui/)", version.Version, bind)
 		srv := &http.Server{
 			Addr:              bind,
-			Handler:           netguard.RequireLoopbackHost(mux),
+			Handler:           netguard.RequireLoopbackHost(handler),
 			ReadHeaderTimeout: 10 * time.Second,
 		}
 		log.Fatal(srv.ListenAndServe())
@@ -100,7 +100,7 @@ func main() {
 		Width:  1200,
 		Height: 900,
 		AssetServer: &assetserver.Options{
-			Handler: mux,
+			Handler: handler,
 		},
 		BackgroundColour: &options.RGBA{R: 12, G: 14, B: 18, A: 255},
 		OnStartup: func(ctx context.Context) {

@@ -56,6 +56,8 @@ export default {
   'prefs.cat.diagnostics': '診断',
   'prefs.saved': '保存しました。',
   'prefs.saveFailed': '設定を保存できませんでした',
+  'prefs.loadFailed': '設定を読み込めませんでした',
+  'prefs.keySet': '設定済み — 置き換えるには新しいキーを入力',
 
   'prefs.lang.intro': 'ここまたは上部バーで一度設定します。受信した音声は検出され、あなたの言語に翻訳されます。返信は選択した各出力言語に展開され、可能な場合は読み仮名が付きます。',
   'prefs.lang.your': 'あなたの言語',

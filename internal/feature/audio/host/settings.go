@@ -213,16 +213,12 @@ func normalizeSettings(s settingsFile) settingsFile {
 }
 
 type settingsPublicJSON struct {
-	OpenAIAPIKey               string  `json:"openai_api_key"`
-	OpenRouterAPIKey           string  `json:"openrouter_api_key"`
 	OpenAIKeyConfigured        bool    `json:"openai_key_configured"`
 	OpenRouterKeyConfigured    bool    `json:"openrouter_key_configured"`
 	OpenAIBaseURL              string  `json:"openai_base_url"`
 	OpenRouterBaseURL          string  `json:"openrouter_base_url"`
-	DashScopeAPIKey            string  `json:"dashscope_api_key"`
 	DashScopeKeyConfigured     bool    `json:"dashscope_key_configured"`
 	DashScopeBaseURL           string  `json:"dashscope_base_url"`
-	DeepgramAPIKey             string  `json:"deepgram_api_key"`
 	DeepgramKeyConfigured      bool    `json:"deepgram_key_configured"`
 	DeepgramBaseURL            string  `json:"deepgram_base_url"`
 	APIProvider                string  `json:"api_provider"`
@@ -296,16 +292,12 @@ type settingsPostJSON struct {
 
 func toSettingsPublicJSON(s settingsFile) settingsPublicJSON {
 	return settingsPublicJSON{
-		OpenAIAPIKey:               s.OpenAIAPIKey,
-		OpenRouterAPIKey:           s.OpenRouterAPIKey,
 		OpenAIKeyConfigured:        strings.TrimSpace(s.OpenAIAPIKey) != "",
 		OpenRouterKeyConfigured:    strings.TrimSpace(s.OpenRouterAPIKey) != "",
 		OpenAIBaseURL:              s.OpenAIBaseURL,
 		OpenRouterBaseURL:          s.OpenRouterBaseURL,
-		DashScopeAPIKey:            s.DashScopeAPIKey,
 		DashScopeKeyConfigured:     strings.TrimSpace(s.DashScopeAPIKey) != "",
 		DashScopeBaseURL:           s.DashScopeBaseURL,
-		DeepgramAPIKey:             s.DeepgramAPIKey,
 		DeepgramKeyConfigured:      strings.TrimSpace(s.DeepgramAPIKey) != "",
 		DeepgramBaseURL:            s.DeepgramBaseURL,
 		APIProvider:                s.APIProvider,

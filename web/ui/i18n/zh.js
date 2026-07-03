@@ -56,6 +56,8 @@ export default {
   'prefs.cat.diagnostics': '诊断',
   'prefs.saved': '已保存。',
   'prefs.saveFailed': '无法保存设置',
+  'prefs.loadFailed': '无法加载设置',
+  'prefs.keySet': '已配置 — 输入新密钥可替换',
 
   'prefs.lang.intro': '在此处或顶部栏设置一次。接收到的语音会被检测并翻译成你的语言；你的回复会扩展到每种输出语言，并在可用时附带读音辅助。',
   'prefs.lang.your': '你的语言',

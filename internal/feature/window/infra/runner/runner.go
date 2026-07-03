@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 	"time"
@@ -195,13 +196,14 @@ func (r *Runner) saveConfigLocked() {
 	r.mu.Lock()
 	w := r.cfg
 	r.mu.Unlock()
-	st, err := r.repo.Load()
+	_, err := r.repo.Update(func(st *domain.Settings) error {
+		w.SessionActive = st.Window.SessionActive
+		st.Window = w
+		return nil
+	})
 	if err != nil {
-		return
+		log.Printf("window-translate: persist window config: %v", err)
 	}
-	w.SessionActive = st.Window.SessionActive
-	st.Window = w
-	_ = r.repo.Save(st)
 }
 
 func (r *Runner) SetTranslator(tr translate.Translator) {

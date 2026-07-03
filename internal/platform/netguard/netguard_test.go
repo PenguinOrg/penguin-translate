@@ -79,3 +79,33 @@ func TestRequireLoopbackHost(t *testing.T) {
 		}
 	}
 }
+
+func TestRequireBrowserOriginLoopback(t *testing.T) {
+	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	guard := RequireBrowserOriginLoopback(next)
+
+	cases := map[string]int{
+		"":                        http.StatusOK,
+		"http://127.0.0.1:18780":  http.StatusOK,
+		"http://localhost:18780":  http.StatusOK,
+		"http://wails.localhost":  http.StatusOK,
+		"https://wails.localhost": http.StatusOK,
+		"http://[::1]:8745":       http.StatusOK,
+		"https://evil.com":        http.StatusForbidden,
+		"http://evil.com:18780":   http.StatusForbidden,
+		"null":                    http.StatusForbidden,
+	}
+	for origin, want := range cases {
+		r := httptest.NewRequest(http.MethodPost, "/api/settings", nil)
+		if origin != "" {
+			r.Header.Set("Origin", origin)
+		}
+		w := httptest.NewRecorder()
+		guard.ServeHTTP(w, r)
+		if w.Code != want {
+			t.Errorf("RequireBrowserOriginLoopback(Origin=%q) = %d, want %d", origin, w.Code, want)
+		}
+	}
+}

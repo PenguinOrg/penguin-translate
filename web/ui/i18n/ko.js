@@ -56,6 +56,8 @@ export default {
   'prefs.cat.diagnostics': '진단',
   'prefs.saved': '저장되었습니다.',
   'prefs.saveFailed': '설정을 저장할 수 없습니다',
+  'prefs.loadFailed': '설정을 불러올 수 없습니다',
+  'prefs.keySet': '설정됨 — 교체하려면 새 키를 입력',
 
   'prefs.lang.intro': '여기 또는 상단 바에서 한 번 설정하세요. 들어오는 음성은 감지되어 내 언어로 번역되고, 답장은 선택한 각 출력 언어로 펼쳐지며 가능한 경우 발음 보조가 함께 표시됩니다.',
   'prefs.lang.your': '내 언어',

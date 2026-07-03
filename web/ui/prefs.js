@@ -237,10 +237,20 @@ export function createPrefsStore(ctx) {
     },
 
     async loadAll() {
-      try { const r = await fetch('/api/settings'); this.settings = r.ok ? await r.json() : {}; } catch (_) { this.settings = {}; }
-      try { const r = await fetch('/api/config'); this.win = r.ok ? await r.json() : {}; } catch (_) { this.win = {}; }
-      try { const r = await fetch('/api/languages'); this.catalog = r.ok ? (await r.json()).catalog || [] : []; } catch (_) { this.catalog = []; }
-      try { const r = await fetch('/api/cuda-devices'); this.cuda = r.ok ? (await r.json()).devices || [] : []; } catch (_) { this.cuda = []; }
+      const load = async (url, apply, fallback) => {
+        try {
+          const r = await fetch(url);
+          if (!r.ok) throw new Error(await httpErrorMessage(r, 'GET ' + url));
+          apply(await r.json());
+        } catch (e) {
+          apply(fallback);
+          ctx.Toasts.push({ title: tt('prefs.loadFailed'), msg: String(e?.message || e) });
+        }
+      };
+      await load('/api/settings', (j) => { this.settings = j; }, {});
+      await load('/api/config', (j) => { this.win = j; }, {});
+      await load('/api/languages', (j) => { this.catalog = j.catalog || []; }, { catalog: [] });
+      await load('/api/cuda-devices', (j) => { this.cuda = j.devices || []; }, { devices: [] });
       this.syncOscDraft();
       this.loaded = true;
     },
@@ -323,6 +333,14 @@ export function createPrefsStore(ctx) {
     removeKey(which) {
       const flag = { openai: 'remove_openai_key', openrouter: 'remove_openrouter_key', dashscope: 'remove_dashscope_key', deepgram: 'remove_deepgram_key', azure: 'remove_azure_key' }[which];
       if (flag) this.save({ [flag]: true });
+    },
+    // Keys are write-only: GET /api/settings only reports *_key_configured, so the
+    // input stays empty and is cleared again once a new key is stored.
+    async saveKey(field, input) {
+      const v = input.value.trim();
+      if (!v) return;
+      await this.save({ [field]: v });
+      if (!this.statusErr) input.value = '';
     },
 
     saveOsc() {

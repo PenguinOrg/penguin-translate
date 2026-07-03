@@ -7,6 +7,7 @@ import (
 
 	rootembed "translation-overlay"
 	"translation-overlay/internal/composition"
+	"translation-overlay/internal/platform/netguard"
 )
 
 func init() {
@@ -15,7 +16,10 @@ func init() {
 	_ = mime.AddExtensionType(".wasm", "application/wasm")
 }
 
-func Mount(mux *http.ServeMux, app *composition.App) {
+// Mount registers all routes and returns the handler both serve modes (-http
+// and the Wails assetserver) must use: it wraps the mux with the browser-origin
+// guard so cross-site pages cannot blind-POST the loopback API.
+func Mount(mux *http.ServeMux, app *composition.App) http.Handler {
 	app.MicTranslate.MountRoutes(mux)
 	app.Audio.MountRoutes(mux)
 	app.Window.MountRoutes(mux)
@@ -33,6 +37,8 @@ func Mount(mux *http.ServeMux, app *composition.App) {
 		}
 		http.Redirect(w, r, "/ui/", http.StatusFound)
 	})
+
+	return netguard.RequireBrowserOriginLoopback(mux)
 }
 
 func webUIFS() fs.FS {

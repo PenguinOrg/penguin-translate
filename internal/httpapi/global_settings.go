@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -12,17 +13,13 @@ import (
 	"translation-overlay/internal/platform/domain"
 )
 
+// API keys are write-only over HTTP: GET exposes only the *_key_configured flags.
 func settingsResponse(app *composition.App, st domain.Settings) map[string]any {
 	return map[string]any{
-		"openai_api_key":            st.OpenAIAPIKey,
-		"openrouter_api_key":        st.OpenRouterAPIKey,
 		"openai_key_configured":     strings.TrimSpace(st.OpenAIAPIKey) != "",
 		"openrouter_key_configured": strings.TrimSpace(st.OpenRouterAPIKey) != "",
-		"dashscope_api_key":         st.DashScopeAPIKey,
 		"dashscope_key_configured":  strings.TrimSpace(st.DashScopeAPIKey) != "",
-		"deepgram_api_key":          st.DeepgramAPIKey,
 		"deepgram_key_configured":   strings.TrimSpace(st.DeepgramAPIKey) != "",
-		"azure_speech_key":          st.AzureSpeechKey,
 		"azure_key_configured":      strings.TrimSpace(st.AzureSpeechKey) != "",
 		"openai_base_url":           st.OpenAIBaseURL,
 		"openrouter_base_url":       st.OpenRouterBaseURL,
@@ -54,6 +51,11 @@ type unifiedSettingsPost struct {
 	Audio               json.RawMessage `json:"audio"`
 }
 
+var (
+	errInvalidPractice = errors.New("invalid mic-translate settings")
+	errInvalidAudio    = errors.New("invalid audio settings")
+)
+
 func handleSettings(app *composition.App) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
@@ -80,68 +82,16 @@ func handleSettings(app *composition.App) http.HandlerFunc {
 				http.Error(w, "invalid JSON", http.StatusBadRequest)
 				return
 			}
-			st, err := app.SettingsRepo.Load()
-			if err != nil {
-				st = domain.DefaultSettings("http://127.0.0.1:8745")
-			}
-
-			if in.RemoveOpenAIKey {
-				st.OpenAIAPIKey = ""
-			} else if k := strings.TrimSpace(in.OpenAIAPIKey); k != "" {
-				st.OpenAIAPIKey = k
-			}
-			if in.RemoveOpenRouterKey {
-				st.OpenRouterAPIKey = ""
-			} else if k := strings.TrimSpace(in.OpenRouterAPIKey); k != "" {
-				st.OpenRouterAPIKey = k
-			}
-			if in.RemoveDashScopeKey {
-				st.DashScopeAPIKey = ""
-			} else if k := strings.TrimSpace(in.DashScopeAPIKey); k != "" {
-				st.DashScopeAPIKey = k
-			}
-			if in.RemoveDeepgramKey {
-				st.DeepgramAPIKey = ""
-			} else if k := strings.TrimSpace(in.DeepgramAPIKey); k != "" {
-				st.DeepgramAPIKey = k
-			}
-			if in.RemoveAzureKey {
-				st.AzureSpeechKey = ""
-			} else if k := strings.TrimSpace(in.AzureSpeechKey); k != "" {
-				st.AzureSpeechKey = k
-			}
-			if bodyHasTopKey(body, "openai_base_url") {
-				st.OpenAIBaseURL = strings.TrimSpace(in.OpenAIBaseURL)
-			}
-			if bodyHasTopKey(body, "openrouter_base_url") {
-				st.OpenRouterBaseURL = strings.TrimSpace(in.OpenRouterBaseURL)
-			}
-			if bodyHasTopKey(body, "dashscope_base_url") {
-				st.DashScopeBaseURL = strings.TrimSpace(in.DashScopeBaseURL)
-			}
-			if bodyHasTopKey(body, "deepgram_base_url") {
-				st.DeepgramBaseURL = strings.TrimSpace(in.DeepgramBaseURL)
-			}
-			if in.SkipWords != nil {
-				st.Window.SkipWords = normalizeSkipWords(in.SkipWords)
-			}
-
-			if hasSection(in.Practice) {
-				if st, err = mictranslatehost.ApplySettingsPatch(st, in.Practice); err != nil {
-					http.Error(w, "invalid mic-translate settings", http.StatusBadRequest)
-					return
-				}
-			}
 			audioTouched := hasSection(in.Audio)
-			if audioTouched {
-				if st, err = audiohost.ApplySettingsPatch(st, in.Audio); err != nil {
-					http.Error(w, "invalid audio settings", http.StatusBadRequest)
-					return
+			st, err := app.SettingsRepo.Update(func(st *domain.Settings) error {
+				return applyUnifiedSettingsPost(st, in, body)
+			})
+			if err != nil {
+				code := http.StatusInternalServerError
+				if errors.Is(err, errInvalidPractice) || errors.Is(err, errInvalidAudio) {
+					code = http.StatusBadRequest
 				}
-			}
-
-			if err := app.SettingsRepo.Save(st); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				http.Error(w, err.Error(), code)
 				return
 			}
 			if audioTouched {
@@ -152,6 +102,65 @@ func handleSettings(app *composition.App) http.HandlerFunc {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
 	}
+}
+
+func applyUnifiedSettingsPost(st *domain.Settings, in unifiedSettingsPost, body []byte) error {
+	if in.RemoveOpenAIKey {
+		st.OpenAIAPIKey = ""
+	} else if k := strings.TrimSpace(in.OpenAIAPIKey); k != "" {
+		st.OpenAIAPIKey = k
+	}
+	if in.RemoveOpenRouterKey {
+		st.OpenRouterAPIKey = ""
+	} else if k := strings.TrimSpace(in.OpenRouterAPIKey); k != "" {
+		st.OpenRouterAPIKey = k
+	}
+	if in.RemoveDashScopeKey {
+		st.DashScopeAPIKey = ""
+	} else if k := strings.TrimSpace(in.DashScopeAPIKey); k != "" {
+		st.DashScopeAPIKey = k
+	}
+	if in.RemoveDeepgramKey {
+		st.DeepgramAPIKey = ""
+	} else if k := strings.TrimSpace(in.DeepgramAPIKey); k != "" {
+		st.DeepgramAPIKey = k
+	}
+	if in.RemoveAzureKey {
+		st.AzureSpeechKey = ""
+	} else if k := strings.TrimSpace(in.AzureSpeechKey); k != "" {
+		st.AzureSpeechKey = k
+	}
+	if bodyHasTopKey(body, "openai_base_url") {
+		st.OpenAIBaseURL = strings.TrimSpace(in.OpenAIBaseURL)
+	}
+	if bodyHasTopKey(body, "openrouter_base_url") {
+		st.OpenRouterBaseURL = strings.TrimSpace(in.OpenRouterBaseURL)
+	}
+	if bodyHasTopKey(body, "dashscope_base_url") {
+		st.DashScopeBaseURL = strings.TrimSpace(in.DashScopeBaseURL)
+	}
+	if bodyHasTopKey(body, "deepgram_base_url") {
+		st.DeepgramBaseURL = strings.TrimSpace(in.DeepgramBaseURL)
+	}
+	if in.SkipWords != nil {
+		st.Window.SkipWords = normalizeSkipWords(in.SkipWords)
+	}
+
+	if hasSection(in.Practice) {
+		next, err := mictranslatehost.ApplySettingsPatch(*st, in.Practice)
+		if err != nil {
+			return errInvalidPractice
+		}
+		*st = next
+	}
+	if hasSection(in.Audio) {
+		next, err := audiohost.ApplySettingsPatch(*st, in.Audio)
+		if err != nil {
+			return errInvalidAudio
+		}
+		*st = next
+	}
+	return nil
 }
 
 func hasSection(raw json.RawMessage) bool {

@@ -24,7 +24,6 @@ import (
 
 type Server struct {
 	repo      port.SettingsRepository
-	st        domain.Settings
 	engine    ocr.Recognizer
 	store     *cache.Store
 	runner    *runner.Runner
@@ -57,7 +56,6 @@ func newServer(repo port.SettingsRepository, st domain.Settings, engine ocr.Reco
 	r := runner.New(repo, w, engine, store, tr, target)
 	s := &Server{
 		repo:    repo,
-		st:      st,
 		engine:  engine,
 		store:   store,
 		runner:  r,
@@ -142,12 +140,12 @@ func (s *Server) handleWindows(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		if st, err := s.repo.Load(); err == nil {
-			s.st = st
-			writeJSON(w, st.Window)
+		st, err := s.repo.Load()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		writeJSON(w, s.st.Window)
+		writeJSON(w, st.Window)
 	case http.MethodPost:
 		var win_ domain.WindowSettings
 		if err := json.NewDecoder(r.Body).Decode(&win_); err != nil {
@@ -155,20 +153,18 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		domain.NormalizeWindowSettings(&win_)
-		st, err := s.repo.Load()
+		st, err := s.repo.Update(func(st *domain.Settings) error {
+			win_.SessionActive = st.Window.SessionActive
+			if len(win_.SkipWords) == 0 {
+				win_.SkipWords = st.Window.SkipWords
+			}
+			st.Window = win_
+			return nil
+		})
 		if err != nil {
-			st = s.st
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
-		win_.SessionActive = st.Window.SessionActive
-		if len(win_.SkipWords) == 0 {
-			win_.SkipWords = st.Window.SkipWords
-		}
-		st.Window = win_
-		_ = s.repo.Save(st)
-		if reloaded, err := s.repo.Load(); err == nil {
-			st = reloaded
-		}
-		s.st = st
 		cfg := st.Window
 		s.store.SetModel(translate.CacheKey(st))
 		s.runner.UpdateConfig(cfg)
@@ -201,24 +197,19 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) setSessionActive(active bool) {
-	st, err := s.repo.Load()
-	if err != nil {
-		s.st.Window.SessionActive = active
-		return
-	}
-	st.Window.SessionActive = active
-	_ = s.repo.Save(st)
-	if reloaded, err := s.repo.Load(); err == nil {
-		s.st = reloaded
-	}
+func (s *Server) setSessionActive(active bool) error {
+	_, err := s.repo.Update(func(st *domain.Settings) error {
+		st.Window.SessionActive = active
+		return nil
+	})
+	return err
 }
 
 func (s *Server) ResumeSessionIfNeeded() {
-	st := s.st
-	if loaded, err := s.repo.Load(); err == nil {
-		st = loaded
-		s.st = loaded
+	st, err := s.repo.Load()
+	if err != nil {
+		log.Printf("window-translate: session resume: load settings: %v", err)
+		return
 	}
 	w := st.Window
 	if !w.SessionActive || s.runner.Running() {
@@ -247,10 +238,10 @@ func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	st := s.st
-	if loaded, err := s.repo.Load(); err == nil {
-		st = loaded
-		s.st = loaded
+	st, err := s.repo.Load()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	cfg := st.Window
 	if strings.EqualFold(cfg.TranslateBackend, "nllb") || strings.EqualFold(cfg.TranslateBackend, "local") {
@@ -268,7 +259,10 @@ func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	s.setSessionActive(true)
+	if err := s.setSessionActive(true); err != nil {
+		http.Error(w, "session started but not persisted: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 	writeJSON(w, map[string]bool{"running": true})
 }
 
@@ -278,7 +272,10 @@ func (s *Server) handleStop(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.runner.Stop()
-	s.setSessionActive(false)
+	if err := s.setSessionActive(false); err != nil {
+		http.Error(w, "session stopped but not persisted: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 	writeJSON(w, map[string]bool{"running": false})
 }
 

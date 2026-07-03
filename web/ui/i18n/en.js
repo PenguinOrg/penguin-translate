@@ -134,6 +134,8 @@ export default {
   'prefs.cat.diagnostics': 'Diagnostics',
   'prefs.saved': 'Saved.',
   'prefs.saveFailed': 'Could not save settings',
+  'prefs.loadFailed': 'Could not load settings',
+  'prefs.keySet': 'Configured — enter a new key to replace',
 
   'prefs.lang.intro': 'Set once here or in the top bar. Incoming speech is detected and translated into your language; your replies fan out to every output language, each with its reading aid where available.',
   'prefs.lang.your': 'Your language',

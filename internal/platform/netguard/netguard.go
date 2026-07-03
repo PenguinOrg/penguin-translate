@@ -54,3 +54,16 @@ func RequireLoopbackHost(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+
+// RequireBrowserOriginLoopback rejects requests a browser marks as cross-site
+// (Origin present and not loopback; the Wails webview origin ends in
+// .localhost). Requests without an Origin header — curl, Go clients — pass.
+func RequireBrowserOriginLoopback(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !AllowBrowserOrigin(r) {
+			http.Error(w, "forbidden origin", http.StatusForbidden)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}

@@ -467,14 +467,14 @@
                 <div class="field">
                   <label x-text="$store.i18n.t('prefs.inf.openaiKey')"></label>
                   <div class="key-row">
-                    <input type="text" autocomplete="off" spellcheck="false" placeholder="sk-…" :value="settings.openai_api_key || ''" @change="s.save({ openai_api_key: $event.target.value.trim() })">
+                    <input type="text" autocomplete="off" spellcheck="false" :placeholder="settings.openai_key_configured ? $store.i18n.t('prefs.keySet') : 'sk-…'" @change="s.saveKey('openai_api_key', $event.target)">
                     <button class="key-remove" @click="s.removeKey('openai')" x-text="$store.i18n.t('common.remove')"></button>
                   </div>
                 </div>
                 <div class="field">
                   <label x-text="$store.i18n.t('prefs.inf.openrouterKey')"></label>
                   <div class="key-row">
-                    <input type="text" autocomplete="off" spellcheck="false" placeholder="sk-or-…" :value="settings.openrouter_api_key || ''" @change="s.save({ openrouter_api_key: $event.target.value.trim() })">
+                    <input type="text" autocomplete="off" spellcheck="false" :placeholder="settings.openrouter_key_configured ? $store.i18n.t('prefs.keySet') : 'sk-or-…'" @change="s.saveKey('openrouter_api_key', $event.target)">
                     <button class="key-remove" @click="s.removeKey('openrouter')" x-text="$store.i18n.t('common.remove')"></button>
                   </div>
                 </div>
@@ -482,7 +482,7 @@
                   <div class="field">
                     <label x-text="$store.i18n.t('prefs.cap.deepgramKey')"></label>
                     <div class="key-row">
-                      <input type="text" autocomplete="off" spellcheck="false" placeholder="Deepgram API key" :value="settings.deepgram_api_key || ''" @change="s.save({ deepgram_api_key: $event.target.value.trim() })">
+                      <input type="text" autocomplete="off" spellcheck="false" :placeholder="settings.deepgram_key_configured ? $store.i18n.t('prefs.keySet') : 'Deepgram API key'" @change="s.saveKey('deepgram_api_key', $event.target)">
                       <button class="key-remove" @click="s.removeKey('deepgram')" x-text="$store.i18n.t('common.remove')"></button>
                     </div>
                   </div>
@@ -553,17 +553,17 @@
                 </div>
                 <template x-if="s.micAsrEngine === 'openrouter'">
                   <div class="field"><label x-text="$store.i18n.t('prefs.inf.openrouterKey')"></label>
-                    <div class="key-row"><input type="text" autocomplete="off" spellcheck="false" placeholder="sk-or-…" :value="settings.openrouter_api_key || ''" @change="s.save({ openrouter_api_key: $event.target.value.trim() })"><button class="key-remove" @click="s.removeKey('openrouter')" x-text="$store.i18n.t('common.remove')"></button></div>
+                    <div class="key-row"><input type="text" autocomplete="off" spellcheck="false" :placeholder="settings.openrouter_key_configured ? $store.i18n.t('prefs.keySet') : 'sk-or-…'" @change="s.saveKey('openrouter_api_key', $event.target)"><button class="key-remove" @click="s.removeKey('openrouter')" x-text="$store.i18n.t('common.remove')"></button></div>
                   </div>
                 </template>
                 <template x-if="s.micAsrEngine === 'openai'">
                   <div class="field"><label x-text="$store.i18n.t('prefs.inf.openaiKey')"></label>
-                    <div class="key-row"><input type="text" autocomplete="off" spellcheck="false" placeholder="sk-…" :value="settings.openai_api_key || ''" @change="s.save({ openai_api_key: $event.target.value.trim() })"><button class="key-remove" @click="s.removeKey('openai')" x-text="$store.i18n.t('common.remove')"></button></div>
+                    <div class="key-row"><input type="text" autocomplete="off" spellcheck="false" :placeholder="settings.openai_key_configured ? $store.i18n.t('prefs.keySet') : 'sk-…'" @change="s.saveKey('openai_api_key', $event.target)"><button class="key-remove" @click="s.removeKey('openai')" x-text="$store.i18n.t('common.remove')"></button></div>
                   </div>
                 </template>
                 <template x-if="s.micAsrEngine === 'deepgram'">
                   <div class="field"><label x-text="$store.i18n.t('prefs.cap.deepgramKey')"></label>
-                    <div class="key-row"><input type="text" autocomplete="off" spellcheck="false" placeholder="Deepgram API key" :value="settings.deepgram_api_key || ''" @change="s.save({ deepgram_api_key: $event.target.value.trim() })"><button class="key-remove" @click="s.removeKey('deepgram')" x-text="$store.i18n.t('common.remove')"></button></div>
+                    <div class="key-row"><input type="text" autocomplete="off" spellcheck="false" :placeholder="settings.deepgram_key_configured ? $store.i18n.t('prefs.keySet') : 'Deepgram API key'" @change="s.saveKey('deepgram_api_key', $event.target)"><button class="key-remove" @click="s.removeKey('deepgram')" x-text="$store.i18n.t('common.remove')"></button></div>
                   </div>
                 </template>
               </fieldset>
@@ -591,22 +591,22 @@
                 </template>
                 <template x-if="s.ttsEngine === 'openai'">
                   <div class="field"><label x-text="$store.i18n.t('prefs.inf.openaiKey')"></label>
-                    <div class="key-row"><input type="text" autocomplete="off" spellcheck="false" placeholder="sk-…" :value="settings.openai_api_key || ''" @change="s.save({ openai_api_key: $event.target.value.trim() })"><button class="key-remove" @click="s.removeKey('openai')" x-text="$store.i18n.t('common.remove')"></button></div>
+                    <div class="key-row"><input type="text" autocomplete="off" spellcheck="false" :placeholder="settings.openai_key_configured ? $store.i18n.t('prefs.keySet') : 'sk-…'" @change="s.saveKey('openai_api_key', $event.target)"><button class="key-remove" @click="s.removeKey('openai')" x-text="$store.i18n.t('common.remove')"></button></div>
                   </div>
                 </template>
                 <template x-if="s.ttsEngine === 'openrouter'">
                   <div class="field"><label x-text="$store.i18n.t('prefs.inf.openrouterKey')"></label>
-                    <div class="key-row"><input type="text" autocomplete="off" spellcheck="false" placeholder="sk-or-…" :value="settings.openrouter_api_key || ''" @change="s.save({ openrouter_api_key: $event.target.value.trim() })"><button class="key-remove" @click="s.removeKey('openrouter')" x-text="$store.i18n.t('common.remove')"></button></div>
+                    <div class="key-row"><input type="text" autocomplete="off" spellcheck="false" :placeholder="settings.openrouter_key_configured ? $store.i18n.t('prefs.keySet') : 'sk-or-…'" @change="s.saveKey('openrouter_api_key', $event.target)"><button class="key-remove" @click="s.removeKey('openrouter')" x-text="$store.i18n.t('common.remove')"></button></div>
                   </div>
                 </template>
                 <template x-if="s.ttsEngine === 'deepgram'">
                   <div class="field"><label x-text="$store.i18n.t('prefs.cap.deepgramKey')"></label>
-                    <div class="key-row"><input type="text" autocomplete="off" spellcheck="false" placeholder="Deepgram API key" :value="settings.deepgram_api_key || ''" @change="s.save({ deepgram_api_key: $event.target.value.trim() })"><button class="key-remove" @click="s.removeKey('deepgram')" x-text="$store.i18n.t('common.remove')"></button></div>
+                    <div class="key-row"><input type="text" autocomplete="off" spellcheck="false" :placeholder="settings.deepgram_key_configured ? $store.i18n.t('prefs.keySet') : 'Deepgram API key'" @change="s.saveKey('deepgram_api_key', $event.target)"><button class="key-remove" @click="s.removeKey('deepgram')" x-text="$store.i18n.t('common.remove')"></button></div>
                   </div>
                 </template>
                 <template x-if="s.ttsEngine === 'dashscope'">
                   <div class="field"><label x-text="$store.i18n.t('prefs.prac.dashscopeKey')"></label>
-                    <div class="key-row"><input type="text" autocomplete="off" spellcheck="false" placeholder="DashScope API key" :value="settings.dashscope_api_key || ''" @change="s.save({ dashscope_api_key: $event.target.value.trim() })"><button class="key-remove" @click="s.removeKey('dashscope')" x-text="$store.i18n.t('common.remove')"></button></div>
+                    <div class="key-row"><input type="text" autocomplete="off" spellcheck="false" :placeholder="settings.dashscope_key_configured ? $store.i18n.t('prefs.keySet') : 'DashScope API key'" @change="s.saveKey('dashscope_api_key', $event.target)"><button class="key-remove" @click="s.removeKey('dashscope')" x-text="$store.i18n.t('common.remove')"></button></div>
                   </div>
                 </template>
                 <p class="hint" x-text="$store.i18n.t('prefs.prac.ttsHint')"></p>
@@ -628,7 +628,7 @@
                     </div>
                     <div class="field">
                       <label x-text="$store.i18n.t('prefs.prac.azureKey')"></label>
-                      <div class="key-row"><input type="text" autocomplete="off" spellcheck="false" placeholder="Azure Speech key" :value="settings.azure_speech_key || ''" @change="s.save({ azure_speech_key: $event.target.value.trim() })"><button class="key-remove" @click="s.removeKey('azure')" x-text="$store.i18n.t('common.remove')"></button></div>
+                      <div class="key-row"><input type="text" autocomplete="off" spellcheck="false" :placeholder="settings.azure_key_configured ? $store.i18n.t('prefs.keySet') : 'Azure Speech key'" @change="s.saveKey('azure_speech_key', $event.target)"><button class="key-remove" @click="s.removeKey('azure')" x-text="$store.i18n.t('common.remove')"></button></div>
                       <p class="hint" x-text="$store.i18n.t('prefs.prac.azureHint')"></p>
                     </div>
                   </div>
@@ -661,7 +661,7 @@
                   <div class="field">
                     <label x-text="$store.i18n.t('prefs.cap.dashscopeKey')"></label>
                     <div class="key-row">
-                      <input type="text" autocomplete="off" spellcheck="false" placeholder="sk-…" :value="settings.dashscope_api_key || ''" @change="s.save({ dashscope_api_key: $event.target.value.trim() })">
+                      <input type="text" autocomplete="off" spellcheck="false" :placeholder="settings.dashscope_key_configured ? $store.i18n.t('prefs.keySet') : 'DashScope API key'" @change="s.saveKey('dashscope_api_key', $event.target)">
                       <button class="key-remove" @click="s.removeKey('dashscope')" x-text="$store.i18n.t('common.remove')"></button>
                     </div>
                   </div>
@@ -670,7 +670,7 @@
                   <div class="field">
                     <label x-text="$store.i18n.t('prefs.inf.openrouterKey')"></label>
                     <div class="key-row">
-                      <input type="text" autocomplete="off" spellcheck="false" placeholder="sk-or-…" :value="settings.openrouter_api_key || ''" @change="s.save({ openrouter_api_key: $event.target.value.trim() })">
+                      <input type="text" autocomplete="off" spellcheck="false" :placeholder="settings.openrouter_key_configured ? $store.i18n.t('prefs.keySet') : 'sk-or-…'" @change="s.saveKey('openrouter_api_key', $event.target)">
                       <button class="key-remove" @click="s.removeKey('openrouter')" x-text="$store.i18n.t('common.remove')"></button>
                     </div>
                   </div>
@@ -679,7 +679,7 @@
                   <div class="field">
                     <label x-text="$store.i18n.t('prefs.inf.openaiKey')"></label>
                     <div class="key-row">
-                      <input type="text" autocomplete="off" spellcheck="false" placeholder="sk-…" :value="settings.openai_api_key || ''" @change="s.save({ openai_api_key: $event.target.value.trim() })">
+                      <input type="text" autocomplete="off" spellcheck="false" :placeholder="settings.openai_key_configured ? $store.i18n.t('prefs.keySet') : 'sk-…'" @change="s.saveKey('openai_api_key', $event.target)">
                       <button class="key-remove" @click="s.removeKey('openai')" x-text="$store.i18n.t('common.remove')"></button>
                     </div>
                   </div>
@@ -688,7 +688,7 @@
                   <div class="field">
                     <label x-text="$store.i18n.t('prefs.cap.deepgramKey')"></label>
                     <div class="key-row">
-                      <input type="text" autocomplete="off" spellcheck="false" placeholder="Deepgram API key" :value="settings.deepgram_api_key || ''" @change="s.save({ deepgram_api_key: $event.target.value.trim() })">
+                      <input type="text" autocomplete="off" spellcheck="false" :placeholder="settings.deepgram_key_configured ? $store.i18n.t('prefs.keySet') : 'Deepgram API key'" @change="s.saveKey('deepgram_api_key', $event.target)">
                       <button class="key-remove" @click="s.removeKey('deepgram')" x-text="$store.i18n.t('common.remove')"></button>
                     </div>
                   </div>
@@ -699,19 +699,19 @@
                     <p class="hint" x-text="$store.i18n.t('prefs.cap.translateKeyHint')"></p>
                     <template x-if="s.translateProvider === 'openai'">
                       <div class="key-row">
-                        <input type="text" autocomplete="off" spellcheck="false" placeholder="sk-…" :value="settings.openai_api_key || ''" @change="s.save({ openai_api_key: $event.target.value.trim() })">
+                        <input type="text" autocomplete="off" spellcheck="false" :placeholder="settings.openai_key_configured ? $store.i18n.t('prefs.keySet') : 'sk-…'" @change="s.saveKey('openai_api_key', $event.target)">
                         <button class="key-remove" @click="s.removeKey('openai')" x-text="$store.i18n.t('common.remove')"></button>
                       </div>
                     </template>
                     <template x-if="s.translateProvider === 'openrouter'">
                       <div class="key-row">
-                        <input type="text" autocomplete="off" spellcheck="false" placeholder="sk-or-…" :value="settings.openrouter_api_key || ''" @change="s.save({ openrouter_api_key: $event.target.value.trim() })">
+                        <input type="text" autocomplete="off" spellcheck="false" :placeholder="settings.openrouter_key_configured ? $store.i18n.t('prefs.keySet') : 'sk-or-…'" @change="s.saveKey('openrouter_api_key', $event.target)">
                         <button class="key-remove" @click="s.removeKey('openrouter')" x-text="$store.i18n.t('common.remove')"></button>
                       </div>
                     </template>
                     <template x-if="s.translateProvider === 'dashscope'">
                       <div class="key-row">
-                        <input type="text" autocomplete="off" spellcheck="false" placeholder="sk-…" :value="settings.dashscope_api_key || ''" @change="s.save({ dashscope_api_key: $event.target.value.trim() })">
+                        <input type="text" autocomplete="off" spellcheck="false" :placeholder="settings.dashscope_key_configured ? $store.i18n.t('prefs.keySet') : 'DashScope API key'" @change="s.saveKey('dashscope_api_key', $event.target)">
                         <button class="key-remove" @click="s.removeKey('dashscope')" x-text="$store.i18n.t('common.remove')"></button>
                       </div>
                     </template>
@@ -848,7 +848,7 @@
                   <div class="field">
                     <label x-text="$store.i18n.t('prefs.inf.openrouterKey')"></label>
                     <div class="key-row">
-                      <input type="text" autocomplete="off" spellcheck="false" placeholder="sk-or-…" :value="settings.openrouter_api_key || ''" @change="s.save({ openrouter_api_key: $event.target.value.trim() })">
+                      <input type="text" autocomplete="off" spellcheck="false" :placeholder="settings.openrouter_key_configured ? $store.i18n.t('prefs.keySet') : 'sk-or-…'" @change="s.saveKey('openrouter_api_key', $event.target)">
                       <button class="key-remove" @click="s.removeKey('openrouter')" x-text="$store.i18n.t('common.remove')"></button>
                     </div>
                   </div>
@@ -857,7 +857,7 @@
                   <div class="field">
                     <label x-text="$store.i18n.t('prefs.inf.openaiKey')"></label>
                     <div class="key-row">
-                      <input type="text" autocomplete="off" spellcheck="false" placeholder="sk-…" :value="settings.openai_api_key || ''" @change="s.save({ openai_api_key: $event.target.value.trim() })">
+                      <input type="text" autocomplete="off" spellcheck="false" :placeholder="settings.openai_key_configured ? $store.i18n.t('prefs.keySet') : 'sk-…'" @change="s.saveKey('openai_api_key', $event.target)">
                       <button class="key-remove" @click="s.removeKey('openai')" x-text="$store.i18n.t('common.remove')"></button>
                     </div>
                   </div>
