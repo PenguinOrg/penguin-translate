@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	"translation-overlay/internal/platform/timing"
 )
 
 func stopManagedEngine() {
@@ -40,10 +38,6 @@ func terminateEngineProcesses() {
 		killEngineProcessOnPort(port, dataDir, engineDir)
 	} else {
 		log.Printf("engine stop: data dir: %v", err)
-	}
-
-	if pid := timing.TakeManagedEnginePID(); pid > 0 {
-		killProcessTree(pid)
 	}
 }
 

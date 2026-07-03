@@ -39,11 +39,13 @@ func killEngineProcessOnPort(port, dataDir, engineDir string) {
 		engineAbs = engineDir
 	}
 	venvAbs := filepath.Join(dataAbs, "venv")
+	// The dirs are used as -like patterns; unescaped wildcard chars ([ ]) in a
+	// path make verification fail silently and the stale engine survives.
 	script := `
 $port = [int]$env:TO_PORT_KILL
-$venv = $env:TO_VENV_DIR_KILL
-$data = $env:TO_DATA_DIR_KILL
-$engine = $env:TO_ENGINE_DIR_KILL
+$venv = [WildcardPattern]::Escape($env:TO_VENV_DIR_KILL)
+$data = [WildcardPattern]::Escape($env:TO_DATA_DIR_KILL)
+$engine = [WildcardPattern]::Escape($env:TO_ENGINE_DIR_KILL)
 Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue | ForEach-Object {
   $id = [int]$_.OwningProcess
   if ($id -le 0) { return }
@@ -82,8 +84,8 @@ func killEnginePythonUnder(dataDir, engineDir string) {
 		engineAbs = engineDir
 	}
 	script := `
-$data = $env:TO_DATA_DIR_KILL
-$engine = $env:TO_ENGINE_DIR_KILL
+$data = [WildcardPattern]::Escape($env:TO_DATA_DIR_KILL)
+$engine = [WildcardPattern]::Escape($env:TO_ENGINE_DIR_KILL)
 Get-CimInstance Win32_Process -Filter "Name='python.exe'" -ErrorAction SilentlyContinue | ForEach-Object {
   $cl = $_.CommandLine
   if (-not $cl) { return }

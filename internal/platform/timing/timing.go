@@ -129,14 +129,6 @@ func UpdateEngineMetaFromHealth(body []byte) {
 	engineMeta.updated = time.Now()
 }
 
-func TakeManagedEnginePID() int {
-	engineMeta.mu.Lock()
-	defer engineMeta.mu.Unlock()
-	pid := engineMeta.pid
-	engineMeta.pid = 0
-	return pid
-}
-
 func engineMetaSnapshot() (pid int, uptimeSec float64, whisper, nllb, cutlet bool) {
 	engineMeta.mu.RLock()
 	defer engineMeta.mu.RUnlock()

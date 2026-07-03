@@ -237,9 +237,10 @@ export function createPrefsStore(ctx) {
     },
 
     async loadAll() {
-      const load = async (url, apply, fallback) => {
+      const load = async (url, apply, fallback, optional) => {
         try {
           const r = await fetch(url);
+          if (optional && r.status === 404) { apply(fallback); return; }
           if (!r.ok) throw new Error(await httpErrorMessage(r, 'GET ' + url));
           apply(await r.json());
         } catch (e) {
@@ -248,7 +249,8 @@ export function createPrefsStore(ctx) {
         }
       };
       await load('/api/settings', (j) => { this.settings = j; }, {});
-      await load('/api/config', (j) => { this.win = j; }, {});
+      // /api/config only exists on Windows builds (window-translate feature).
+      await load('/api/config', (j) => { this.win = j; }, {}, true);
       await load('/api/languages', (j) => { this.catalog = j.catalog || []; }, { catalog: [] });
       await load('/api/cuda-devices', (j) => { this.cuda = j.devices || []; }, { devices: [] });
       this.syncOscDraft();
