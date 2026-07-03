@@ -7,11 +7,11 @@ import (
 	"os"
 	"strings"
 
-	"translation-overlay/internal/feature/mictranslate/infra/languages"
 	"translation-overlay/internal/feature/mictranslate/nativecloud"
 	"translation-overlay/internal/platform/audio"
 	"translation-overlay/internal/platform/cloudapi"
 	"translation-overlay/internal/platform/engine"
+	"translation-overlay/internal/platform/lang/languages"
 )
 
 func (h *Host) nativeSettingsFromDisk() nativecloud.Settings {

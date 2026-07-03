@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"translation-overlay/internal/feature/mictranslate/infra/languages"
+	"translation-overlay/internal/platform/lang/languages"
 )
 
 func nllbTargetCode(target string) string {

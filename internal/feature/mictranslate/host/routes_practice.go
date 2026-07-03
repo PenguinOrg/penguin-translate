@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"translation-overlay/internal/feature/mictranslate/infra/languages"
 	"translation-overlay/internal/platform/cloudapi"
+	"translation-overlay/internal/platform/lang/languages"
 )
 
 func (s settingsFile) ttsCredentials() cloudapi.Credentials {

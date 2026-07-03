@@ -9,11 +9,11 @@ import (
 	"net/http"
 	"strings"
 
-	"translation-overlay/internal/feature/mictranslate/infra/languages"
 	"translation-overlay/internal/feature/mictranslate/infra/plugin"
 	"translation-overlay/internal/feature/mictranslate/infra/plugin/vrchatosc"
 	scorepkg "translation-overlay/internal/feature/mictranslate/infra/score"
 	"translation-overlay/internal/feature/mictranslate/nativecloud"
+	"translation-overlay/internal/platform/lang/languages"
 	"translation-overlay/internal/platform/lang/readingaid"
 	"translation-overlay/internal/platform/timing"
 )

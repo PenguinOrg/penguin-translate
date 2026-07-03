@@ -7,8 +7,8 @@ import (
 	"strings"
 	"unicode"
 
-	"translation-overlay/internal/feature/mictranslate/infra/languages"
 	"translation-overlay/internal/platform/cloudapi"
+	"translation-overlay/internal/platform/lang/languages"
 )
 
 type Client struct {

@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"translation-overlay/internal/feature/mictranslate/infra/languages"
 	"translation-overlay/internal/platform/engine"
+	"translation-overlay/internal/platform/lang/languages"
 	"translation-overlay/internal/platform/timing"
 )
 

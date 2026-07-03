@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"translation-overlay/internal/feature/mictranslate/infra/languages"
 	"translation-overlay/internal/feature/mictranslate/infra/plugin"
 	"translation-overlay/internal/platform/domain"
+	"translation-overlay/internal/platform/lang/languages"
 )
 
 const settingsFileName = "settings.json"

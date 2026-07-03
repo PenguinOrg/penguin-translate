@@ -3,9 +3,9 @@ package translate
 import (
 	"strings"
 
-	"translation-overlay/internal/feature/mictranslate/infra/languages"
 	"translation-overlay/internal/platform/cloudapi"
 	"translation-overlay/internal/platform/domain"
+	"translation-overlay/internal/platform/lang/languages"
 )
 
 type Translator interface {

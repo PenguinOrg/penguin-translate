@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"translation-overlay/internal/feature/mictranslate/infra/languages"
 	"translation-overlay/internal/platform/cloudapi"
 	"translation-overlay/internal/platform/lang/furigana"
+	"translation-overlay/internal/platform/lang/languages"
 	"translation-overlay/internal/platform/lang/readingaid"
 )
 
