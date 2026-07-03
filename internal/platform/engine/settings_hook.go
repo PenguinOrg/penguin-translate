@@ -1,10 +1,11 @@
 package engine
 
 func whisperGPU() string {
-	if settingsLoader == nil {
+	load := loadSettingsFn()
+	if load == nil {
 		return ""
 	}
-	st, err := settingsLoader()
+	st, err := load()
 	if err != nil {
 		return ""
 	}
@@ -12,10 +13,11 @@ func whisperGPU() string {
 }
 
 func nllbGPU() string {
-	if settingsLoader == nil {
+	load := loadSettingsFn()
+	if load == nil {
 		return ""
 	}
-	st, err := settingsLoader()
+	st, err := load()
 	if err != nil {
 		return ""
 	}

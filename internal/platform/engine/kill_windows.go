@@ -23,23 +23,51 @@ func killProcessTree(pid int) {
 	_ = cmd.Run()
 }
 
-func killProcessesOnPort(port string) {
+// Kills the port's listener only when verified as our engine: image under the
+// app venv, or python running server.py from the app data/engine dirs.
+func killEngineProcessOnPort(port, dataDir, engineDir string) {
 	port = strings.TrimSpace(port)
 	if port == "" {
 		return
 	}
+	dataAbs, _ := filepath.Abs(dataDir)
+	engineAbs, _ := filepath.Abs(engineDir)
+	if dataAbs == "" {
+		dataAbs = dataDir
+	}
+	if engineAbs == "" {
+		engineAbs = engineDir
+	}
+	venvAbs := filepath.Join(dataAbs, "venv")
 	script := `
-$port = ` + port + `
-$conns = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
-foreach ($c in $conns) {
-  $id = [int]$c.OwningProcess
-  if ($id -gt 0) {
-    Stop-Process -Id $id -Force -ErrorAction SilentlyContinue
+$port = [int]$env:TO_PORT_KILL
+$venv = $env:TO_VENV_DIR_KILL
+$data = $env:TO_DATA_DIR_KILL
+$engine = $env:TO_ENGINE_DIR_KILL
+Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue | ForEach-Object {
+  $id = [int]$_.OwningProcess
+  if ($id -le 0) { return }
+  $p = Get-CimInstance Win32_Process -Filter "ProcessId=$id" -ErrorAction SilentlyContinue
+  if (-not $p) { return }
+  $ours = $false
+  if ($p.ExecutablePath -and ($p.ExecutablePath -like ($venv + "\*"))) { $ours = $true }
+  $cl = $p.CommandLine
+  if (-not $ours -and $p.Name -like "python*" -and $cl -and $cl -like "*server.py*" -and (
+      $cl -like ("*" + $data + "*") -or
+      $cl -like ("*" + $engine + "*") -or
+      $cl -like "*translation-overlay*")) { $ours = $true }
+  if ($ours) {
     & taskkill.exe /F /T /PID $id 2>$null | Out-Null
   }
 }
 `
 	cmd := exec.Command("powershell", "-NoProfile", "-NonInteractive", "-Command", script)
+	cmd.Env = append(os.Environ(),
+		"TO_PORT_KILL="+port,
+		"TO_VENV_DIR_KILL="+venvAbs,
+		"TO_DATA_DIR_KILL="+dataAbs,
+		"TO_ENGINE_DIR_KILL="+engineAbs,
+	)
 	osproc.Hide(cmd)
 	_ = cmd.Run()
 }

@@ -6,7 +6,14 @@ import (
 	"translation-overlay/internal/platform/domain"
 )
 
-var settingsLoader func() (domain.Settings, error)
+var settingsLoader atomic.Pointer[func() (domain.Settings, error)]
+
+func loadSettingsFn() func() (domain.Settings, error) {
+	if p := settingsLoader.Load(); p != nil {
+		return *p
+	}
+	return nil
+}
 
 var managedEngineSkipped atomic.Bool
 
@@ -17,10 +24,11 @@ func setManagedEngineSkipped(v bool) {
 }
 
 func managedEngineRequired() bool {
-	if settingsLoader == nil {
+	load := loadSettingsFn()
+	if load == nil {
 		return true
 	}
-	st, err := settingsLoader()
+	st, err := load()
 	if err != nil {
 		return true
 	}

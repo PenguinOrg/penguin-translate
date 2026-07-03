@@ -4,6 +4,6 @@ package engine
 
 func killProcessTree(pid int) {}
 
-func killProcessesOnPort(port string) {}
+func killEngineProcessOnPort(port, dataDir, engineDir string) {}
 
 func killEnginePythonUnder(dataDir, engineDir string) {}

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"translation-overlay/internal/platform/timing"
@@ -52,15 +53,17 @@ func prepareEngine(ctx context.Context) error {
 	sink.setPhase(PhaseSyncEngine, "Unpacking engine", -1)
 	engineDir := filepath.Join(dataDir, "engine")
 	killStaleEnginePython(engineDir)
-	time.Sleep(400 * time.Millisecond)
+	base := managedEngineBaseURL()
+	port := portFromBaseURL(base)
+	if !waitUntilPortFree(port, 8*time.Second) {
+		log.Printf("engine port %s still in use after stale-engine cleanup — another app may be using this port", port)
+	}
 	if err := syncEngineBundle(engineDir); err != nil {
 		sink.fail(err)
 		return err
 	}
 	st.Mark("sync_engine")
 
-	base := managedEngineBaseURL()
-	_ = os.Setenv("TO_ENGINE", base)
 	log.Printf("managed inference engine → %s", base)
 
 	if err := startManagedEngine(ctx, dataDir, engineDir, sink); err != nil {
@@ -106,7 +109,7 @@ func TriggerEngineLoadWithOptions(ctx context.Context, base string, opts LoadOpt
 	timing.UpdateEngineMetaFromHealth(respBody)
 	var snap engineLoadSnapshot
 	if json.Unmarshal(respBody, &snap) == nil && snap.Status != "" {
-		lastLoadSnapshot = snap
+		setLastLoadSnapshot(snap)
 	}
 	var loadOut map[string]any
 	if json.Unmarshal(respBody, &loadOut) == nil {
@@ -130,11 +133,24 @@ type engineLoadSnapshot struct {
 	Detail string `json:"device_detail"`
 }
 
-var lastLoadSnapshot engineLoadSnapshot
+var (
+	lastLoadSnapshotMu sync.Mutex
+	lastLoadSnapshot   engineLoadSnapshot
+)
+
+func setLastLoadSnapshot(s engineLoadSnapshot) {
+	lastLoadSnapshotMu.Lock()
+	lastLoadSnapshot = s
+	lastLoadSnapshotMu.Unlock()
+}
 
 func TryFetchLoadSnapshot(ctx context.Context) { tryFetchLoadSnapshot(ctx) }
 
-func LastLoadSnapshot() engineLoadSnapshot { return lastLoadSnapshot }
+func LastLoadSnapshot() engineLoadSnapshot {
+	lastLoadSnapshotMu.Lock()
+	defer lastLoadSnapshotMu.Unlock()
+	return lastLoadSnapshot
+}
 
 func tryFetchLoadSnapshot(ctx context.Context) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, engineURL()+"/health", nil)
@@ -155,6 +171,6 @@ func tryFetchLoadSnapshot(ctx context.Context) {
 	var out engineLoadSnapshot
 	_ = json.NewDecoder(bytes.NewReader(body)).Decode(&out)
 	if out.Status != "" {
-		lastLoadSnapshot = out
+		setLastLoadSnapshot(out)
 	}
 }

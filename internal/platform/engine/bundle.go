@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	rootembed "translation-overlay"
@@ -53,7 +54,7 @@ func embeddedEngineFingerprint() (string, error) {
 }
 
 func killStaleEnginePython(_ string) {
-	stopManagedEngine()
+	terminateEngineProcesses()
 }
 
 func appDataDir() (string, error) {
@@ -330,6 +331,7 @@ func startManagedEngine(ctx context.Context, dataDir, engineDir string, sink *st
 		_ = lf.Close()
 		return err
 	}
+	managedEngineStarted.Store(true)
 	log.Printf("engine subprocess started (pid %d); log %s", cmd.Process.Pid, logPath)
 	timing.RecordManagedEngineStart(cmd.Process.Pid)
 	setManagedCmd(cmd)
@@ -376,9 +378,39 @@ func waitEngineHealthy(ctx context.Context, base string, maxWait time.Duration, 
 	return fmt.Errorf("engine did not become healthy at %s — see %%LOCALAPPDATA%%\\translation-overlay\\engine.log (another app may be using this port)", base)
 }
 
+type engineEnv struct {
+	externalURL string
+	skipManaged bool
+	host        string
+	port        string
+}
+
+var (
+	engineEnvOnce sync.Once
+	engineEnvSnap engineEnv
+)
+
+// Snapshotted once at first use — engine code must never re-read these env vars
+// at runtime (a former runtime Setenv("TO_ENGINE") made Shutdown a no-op).
+func envSnapshot() engineEnv {
+	engineEnvOnce.Do(func() {
+		engineEnvSnap.externalURL = strings.TrimSpace(os.Getenv("TO_ENGINE"))
+		engineEnvSnap.skipManaged = strings.TrimSpace(os.Getenv("TO_SKIP_MANAGED_ENGINE")) != ""
+		engineEnvSnap.host = strings.TrimSpace(os.Getenv("TO_ENGINE_HOST"))
+		if engineEnvSnap.host == "" {
+			engineEnvSnap.host = "127.0.0.1"
+		}
+		engineEnvSnap.port = strings.TrimSpace(os.Getenv("TO_ENGINE_PORT"))
+		if engineEnvSnap.port == "" {
+			engineEnvSnap.port = defaultEnginePort
+		}
+	})
+	return engineEnvSnap
+}
+
 func EngineURL() string {
-	if u := strings.TrimSpace(os.Getenv("TO_ENGINE")); u != "" {
-		return strings.TrimRight(u, "/")
+	if env := envSnapshot(); env.externalURL != "" {
+		return strings.TrimRight(env.externalURL, "/")
 	}
 	return managedEngineBaseURL()
 }
@@ -386,7 +418,7 @@ func EngineURL() string {
 func engineURL() string { return EngineURL() }
 
 func Prepare(ctx context.Context, load func() (domain.Settings, error)) error {
-	settingsLoader = load
+	settingsLoader.Store(&load)
 	return prepareEngine(ctx)
 }
 
@@ -395,25 +427,13 @@ func LoadModelsWithOptions(ctx context.Context, opts LoadOptions) error {
 }
 
 func managedEngineBaseURL() string {
-	host := strings.TrimSpace(os.Getenv("TO_ENGINE_HOST"))
-	if host == "" {
-		host = "127.0.0.1"
-	}
-	port := strings.TrimSpace(os.Getenv("TO_ENGINE_PORT"))
-	if port == "" {
-		port = defaultEnginePort
-	}
-	return "http://" + host + ":" + port
+	env := envSnapshot()
+	return "http://" + env.host + ":" + env.port
 }
 
 func useManagedEngine() bool {
-	if strings.TrimSpace(os.Getenv("TO_SKIP_MANAGED_ENGINE")) != "" {
-		return false
-	}
-	if strings.TrimSpace(os.Getenv("TO_ENGINE")) != "" {
-		return false
-	}
-	return true
+	env := envSnapshot()
+	return !env.skipManaged && env.externalURL == ""
 }
 
 func Shutdown() {

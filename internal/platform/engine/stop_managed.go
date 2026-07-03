@@ -11,12 +11,19 @@ import (
 )
 
 func stopManagedEngine() {
-	if !useManagedEngine() {
+	if !managedEngineStarted.CompareAndSwap(true, false) {
 		return
 	}
-	if ManagedEngineSkipped() {
-		return
+	port := portFromBaseURL(managedEngineBaseURL())
+	terminateEngineProcesses()
+	if waitUntilPortFree(port, 8*time.Second) {
+		log.Printf("engine stopped (port %s free)", port)
+	} else {
+		log.Printf("engine stop: port %s still in use after timeout — kill python manually if VRAM is stuck", port)
 	}
+}
+
+func terminateEngineProcesses() {
 	base := managedEngineBaseURL()
 	port := portFromBaseURL(base)
 
@@ -28,21 +35,15 @@ func stopManagedEngine() {
 
 	dataDir, err := appDataDir()
 	if err == nil {
-		killEnginePythonUnder(dataDir, filepath.Join(dataDir, "engine"))
+		engineDir := filepath.Join(dataDir, "engine")
+		killEnginePythonUnder(dataDir, engineDir)
+		killEngineProcessOnPort(port, dataDir, engineDir)
 	} else {
 		log.Printf("engine stop: data dir: %v", err)
 	}
-	killProcessesOnPort(port)
 
 	if pid := timing.TakeManagedEnginePID(); pid > 0 {
 		killProcessTree(pid)
-	}
-
-	if waitUntilPortFree(port, 8*time.Second) {
-		log.Printf("engine stopped (port %s free)", port)
-	} else {
-		log.Printf("engine stop: port %s still in use after timeout — kill python manually if VRAM is stuck", port)
-		killProcessesOnPort(port)
 	}
 }
 
@@ -51,10 +52,6 @@ func waitUntilPortFree(port string, maxWait time.Duration) bool {
 	for time.Now().Before(deadline) {
 		if !enginePortOpen(port) {
 			return true
-		}
-		killProcessesOnPort(port)
-		if dataDir, err := appDataDir(); err == nil {
-			killEnginePythonUnder(dataDir, filepath.Join(dataDir, "engine"))
 		}
 		time.Sleep(250 * time.Millisecond)
 	}
