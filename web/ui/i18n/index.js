@@ -5,7 +5,7 @@ import ko from '/ui/i18n/ko.js';
 
 export const DICTS = { en, ja, zh, ko };
 
-// Keep in sync with internal/feature/mictranslate/infra/languages CanonicalID;
+// Keep in sync with internal/platform/lang/languages CanonicalID;
 // anything not listed falls back to English.
 const ALIASES = {
   jp: 'ja', jpn: 'ja', japanese: 'ja',
