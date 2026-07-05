@@ -354,6 +354,19 @@
           </select>
           <span class="lane-meter"><i></i></span>
         </span>
+        <span class="lane-sep"></span>
+        <span class="interp" :class="{ on: $store.conversation.interpreter.on, live: $store.conversation.interpreter.active }">
+          <button type="button" class="lane-toggle interp-toggle" :title="$store.i18n.t('conv.interpToggle')" :aria-pressed="String($store.conversation.interpreter.on)" @click="$store.conversation.toggleInterpreter()">🎙⚡</button>
+          <template x-if="$store.conversation.interpreter.on">
+            <span class="interp-cfg">
+              <span class="interp-target" x-text="$store.i18n.t('conv.interpTo', { lang: $store.conversation.interpreterTargetLabel })"></span>
+              <select class="lane-dev interp-out" :title="$store.i18n.t('conv.interpOutput')" x-model="$store.conversation.interpreter.outputDevice" @change="$store.conversation.changeInterpreterDevice()">
+                <template x-for="(d, di) in $store.conversation.interpreter.outputDevices" :key="di"><option :value="d.id" x-text="d.label"></option></template>
+              </select>
+              <label class="interp-echo" :title="$store.i18n.t('conv.interpEchoHint')"><input type="checkbox" :checked="$store.conversation.interpreter.echo" @change="$store.conversation.setInterpreterEcho($event.target.checked)"> <span x-text="$store.i18n.t('conv.interpEcho')"></span></label>
+            </span>
+          </template>
+        </span>
         <span class="conv-composer">
           <input type="text" class="conv-input" :placeholder="$store.i18n.t('conv.composer')" x-model="$store.conversation.composer" @keydown.enter.prevent="$store.conversation.sendComposer($event.target.value); $event.target.value = ''" autocomplete="off" />
         </span>
@@ -487,6 +500,14 @@
                     </div>
                   </div>
                 </template>
+                <div class="field">
+                  <label x-text="$store.i18n.t('prefs.inf.geminiKey')"></label>
+                  <div class="key-row">
+                    <input type="text" autocomplete="off" spellcheck="false" :placeholder="settings.gemini_key_configured ? $store.i18n.t('prefs.keySet') : 'AI Studio API key'" @change="s.saveKey('gemini_api_key', $event.target)">
+                    <button class="key-remove" @click="s.removeKey('gemini')" x-text="$store.i18n.t('common.remove')"></button>
+                  </div>
+                  <p class="hint" x-text="$store.i18n.t('prefs.inf.geminiHint')"></p>
+                </div>
               </fieldset>
               <template x-if="s.advanced">
                 <div>

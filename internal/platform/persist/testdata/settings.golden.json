@@ -8,6 +8,7 @@
   "deepgram_api_key": "",
   "deepgram_base_url": "https://api.deepgram.com",
   "azure_speech_key": "",
+  "gemini_api_key": "",
   "practice": {
     "forward_translator": "openai",
     "openai_forward_model": "gpt-4o-mini",
@@ -45,6 +46,8 @@
     "pipeline_mode": "split",
     "api_provider": "openrouter",
     "multimodal_model": "xiaomi/mimo-v2-flash",
+    "live_model": "gemini-3.5-live-translate-preview",
+    "live_echo": false,
     "practice_enabled": false,
     "session_active": false
   },

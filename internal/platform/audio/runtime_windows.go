@@ -22,7 +22,14 @@ func NativeLoopbackBaseURL() string {
 	return "http://" + host + ":" + port
 }
 
-func NativeLoopbackWSURL() string {
+func NativeLoopbackWSURL() string { return nativeWSURL("/ws/loopback") }
+
+// NativeLiveMicWSURL is the sidecar endpoint the browser streams microphone PCM
+// to for Interpreter mode. It must be an absolute loopback URL to the real
+// sidecar server: the Wails assetserver cannot upgrade WebSocket connections.
+func NativeLiveMicWSURL() string { return nativeWSURL("/ws/live-mic") }
+
+func nativeWSURL(path string) string {
 	base := NativeLoopbackBaseURL()
 	u, err := url.Parse(base)
 	if err != nil {
@@ -34,6 +41,6 @@ func NativeLoopbackWSURL() string {
 	default:
 		u.Scheme = "ws"
 	}
-	u.Path = "/ws/loopback"
+	u.Path = path
 	return u.String()
 }

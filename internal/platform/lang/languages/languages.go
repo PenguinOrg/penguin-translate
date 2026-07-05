@@ -155,3 +155,18 @@ func LangOr(id string) Language {
 	en, _ := Lang("en")
 	return en
 }
+
+// GeminiCode maps an app language id to the BCP-47 code the Gemini Live Translate
+// model expects. Most ids pass through as their ASR code; the exceptions are the
+// scripts/regions where Gemini only accepts a qualified tag (zh → zh-Hans,
+// pt → pt-PT) while the app catalog stores the bare code.
+func GeminiCode(id string) string {
+	switch CanonicalID(id) {
+	case "zh":
+		return "zh-Hans"
+	case "pt":
+		return "pt-PT"
+	default:
+		return LangOr(id).ASRCode
+	}
+}

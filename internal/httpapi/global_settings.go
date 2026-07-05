@@ -21,6 +21,7 @@ func settingsResponse(app *composition.App, st domain.Settings) map[string]any {
 		"dashscope_key_configured":  strings.TrimSpace(st.DashScopeAPIKey) != "",
 		"deepgram_key_configured":   strings.TrimSpace(st.DeepgramAPIKey) != "",
 		"azure_key_configured":      strings.TrimSpace(st.AzureSpeechKey) != "",
+		"gemini_key_configured":     strings.TrimSpace(st.GeminiAPIKey) != "",
 		"openai_base_url":           st.OpenAIBaseURL,
 		"openrouter_base_url":       st.OpenRouterBaseURL,
 		"dashscope_base_url":        st.DashScopeBaseURL,
@@ -46,6 +47,8 @@ type unifiedSettingsPost struct {
 	DeepgramBaseURL     string          `json:"deepgram_base_url"`
 	AzureSpeechKey      string          `json:"azure_speech_key"`
 	RemoveAzureKey      bool            `json:"remove_azure_key"`
+	GeminiAPIKey        string          `json:"gemini_api_key"`
+	RemoveGeminiKey     bool            `json:"remove_gemini_key"`
 	SkipWords           []string        `json:"skip_words"`
 	Practice            json.RawMessage `json:"practice"`
 	Audio               json.RawMessage `json:"audio"`
@@ -129,6 +132,11 @@ func applyUnifiedSettingsPost(st *domain.Settings, in unifiedSettingsPost, body 
 		st.AzureSpeechKey = ""
 	} else if k := strings.TrimSpace(in.AzureSpeechKey); k != "" {
 		st.AzureSpeechKey = k
+	}
+	if in.RemoveGeminiKey {
+		st.GeminiAPIKey = ""
+	} else if k := strings.TrimSpace(in.GeminiAPIKey); k != "" {
+		st.GeminiAPIKey = k
 	}
 	if bodyHasTopKey(body, "openai_base_url") {
 		st.OpenAIBaseURL = strings.TrimSpace(in.OpenAIBaseURL)

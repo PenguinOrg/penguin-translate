@@ -7,3 +7,5 @@ const NativeLoopbackPort = ""
 func NativeLoopbackBaseURL() string { return "" }
 
 func NativeLoopbackWSURL() string { return "" }
+
+func NativeLiveMicWSURL() string { return "" }

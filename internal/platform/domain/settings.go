@@ -12,6 +12,7 @@ type Settings struct {
 	DeepgramAPIKey    string               `json:"deepgram_api_key"`
 	DeepgramBaseURL   string               `json:"deepgram_base_url"`
 	AzureSpeechKey    string               `json:"azure_speech_key"`
+	GeminiAPIKey      string               `json:"gemini_api_key"`
 	MicTranslate      MicTranslateSettings `json:"practice"`
 	Window            WindowSettings       `json:"window"`
 	Audio             AudioSettings        `json:"audio"`
@@ -52,6 +53,8 @@ type MicTranslateSettings struct {
 	PipelineMode              string                     `json:"pipeline_mode"`
 	APIProvider               string                     `json:"api_provider"`
 	MultimodalModel           string                     `json:"multimodal_model"`
+	LiveModel                 string                     `json:"live_model"`
+	LiveEcho                  bool                       `json:"live_echo"`
 	PracticeEnabled           bool                       `json:"practice_enabled"`
 	SessionActive             bool                       `json:"session_active"`
 }
@@ -150,6 +153,7 @@ func DefaultSettings(engineBaseURL string) Settings {
 			PipelineMode:              "split",
 			APIProvider:               "openrouter",
 			MultimodalModel:           "xiaomi/mimo-v2-flash",
+			LiveModel:                 "gemini-3.5-live-translate-preview",
 		},
 		Window: WindowSettings{
 			OpenAIModel:         "gpt-4o-mini",

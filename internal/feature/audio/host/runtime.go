@@ -30,6 +30,7 @@ func (h *Host) handleAudioRuntime(w http.ResponseWriter, r *http.Request) {
 	out := map[string]any{
 		"native_audio":     true,
 		"loopback_ws_url":  audio.NativeLoopbackWSURL(),
+		"live_mic_ws_url":  audio.NativeLiveMicWSURL(),
 		"loopback_http":    audio.NativeLoopbackBaseURL(),
 		"transcribe":       "go",
 		"managed_engine":   managedEngine,

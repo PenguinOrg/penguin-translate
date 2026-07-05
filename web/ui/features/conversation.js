@@ -143,6 +143,112 @@ export function createConversationStore(ctx) {
     return { rmsSpeech, rmsQuiet, minSamples, maxSamples, longAfterSamples, silenceFrames: Math.round(450 / VAD_FRAME_MS), silenceLongFrames: Math.round(180 / VAD_FRAME_MS), fragmentSamples: Math.floor(16000 * 1.0), fragmentExtraSilenceFrames: Math.round(500 / VAD_FRAME_MS), loudFrames: 2, frameSamples: VAD_FRAME_SAMPLES };
   }
 
+  // Interpreter mode (Gemini Live Translate). When on, the mic lane's 16 kHz
+  // frames are streamed to the Go bridge (/api/live/mic) instead of the local
+  // VAD/segmenter; the bridge holds one upstream Gemini session and streams back
+  // source/target transcripts (as deltas) plus translated speech (24 kHz PCM),
+  // which we play out to a chosen output device via setSinkId.
+  function interpreterTarget() { return (otherLangs && otherLangs.length) ? otherLangs[0] : 'ja'; }
+
+  const play = {
+    ctx: null, dest: null, el: null, nextTime: 0,
+    async ensure(deviceId) {
+      if (!this.ctx) {
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+        this.dest = this.ctx.createMediaStreamDestination();
+        this.el = new Audio();
+        this.el.srcObject = this.dest.stream;
+        this.el.autoplay = true;
+        try { await this.el.play(); } catch (_) {}
+      }
+      if (this.el && this.el.setSinkId) { try { await this.el.setSinkId(deviceId || ''); } catch (_) {} }
+    },
+    push(int16) {
+      if (!this.ctx) return;
+      const f32 = new Float32Array(int16.length);
+      for (let i = 0; i < int16.length; i++) f32[i] = int16[i] / 32768;
+      const buf = this.ctx.createBuffer(1, f32.length, 24000);
+      buf.getChannelData(0).set(f32);
+      const src = this.ctx.createBufferSource();
+      src.buffer = buf; src.connect(this.dest);
+      const now = this.ctx.currentTime;
+      if (this.nextTime < now) this.nextTime = now + 0.04;
+      src.start(this.nextTime); this.nextTime += buf.duration;
+    },
+    async setSink(deviceId) { if (this.el && this.el.setSinkId) { try { await this.el.setSinkId(deviceId || ''); } catch (_) {} } },
+    stop() {
+      if (this.el) { try { this.el.pause(); } catch (_) {} this.el.srcObject = null; this.el = null; }
+      if (this.ctx) { this.ctx.close().catch(() => {}); this.ctx = null; }
+      this.dest = null; this.nextTime = 0;
+    },
+  };
+
+  // The mic bridge is served on the native loopback sidecar (real port), NOT the
+  // app origin — the Wails assetserver can't upgrade WebSockets. The URL comes
+  // from /api/audio/runtime (same source as the loopback lane), with the fixed
+  // sidecar address as a fallback.
+  async function liveMicWSURL() {
+    try { const j = await (await fetch('/api/audio/runtime')).json(); if (j && j.live_mic_ws_url) return j.live_mic_ws_url; } catch (_) {}
+    return 'ws://127.0.0.1:8746/ws/live-mic';
+  }
+
+  const interp = {
+    ws: null, liveTurnId: null, commitTimer: null, srcBuf: '', dstBuf: '',
+    open() {
+      const target = interpreterTarget();
+      return new Promise((resolve, reject) => {
+        let settled = false;
+        const done = (fn, arg) => { if (!settled) { settled = true; clearTimeout(timer); fn(arg); } };
+        const timer = setTimeout(() => done(reject, new Error('interpreter start timed out')), 20000);
+        Promise.all([play.ensure(S().interpreter.outputDevice), liveMicWSURL()]).then(([, wsURL]) => {
+          const ws = new WebSocket(wsURL); ws.binaryType = 'arraybuffer'; interp.ws = ws;
+          ws.onopen = () => ws.send(JSON.stringify({ cmd: 'start', target, echo: !!S().interpreter.echo }));
+          ws.onmessage = (ev) => {
+            if (typeof ev.data !== 'string') { play.push(new Int16Array(ev.data)); return; }
+            let j; try { j = JSON.parse(ev.data); } catch (_) { return; }
+            if (j.kind === 'ready') { S().interpreter.active = true; done(resolve); return; }
+            if (j.kind === 'error') { const m = j.msg || 'interpreter error'; if (!settled) done(reject, new Error(m)); else setStatus(m); return; }
+            if (j.kind === 'src') interp.onDelta('src', j.text);
+            else if (j.kind === 'dst') interp.onDelta('dst', j.text);
+          };
+          ws.onerror = () => done(reject, new Error('interpreter connection failed — is the native audio sidecar on :8746?'));
+          ws.onclose = () => { if (interp.ws === ws) interp.ws = null; S().interpreter.active = false; };
+        }).catch((e) => done(reject, e));
+      });
+    },
+    feed(int16) { const ws = interp.ws; if (ws && ws.readyState === 1) ws.send(int16); },
+    onDelta(which, text) {
+      if (!text) return;
+      if (which === 'src') interp.srcBuf += text; else interp.dstBuf += text;
+      interp.ensureLiveTurn();
+      const idx = S().turns.findIndex((t) => t.id === interp.liveTurnId);
+      if (idx >= 0) { S().turns[idx].original = interp.srcBuf; S().turns[idx].rows[0].textHTML = esc(interp.dstBuf); S().turns[idx].rows[0].text = interp.dstBuf; }
+      S().interpreter.liveSrc = interp.srcBuf; S().interpreter.liveDst = interp.dstBuf;
+      scrollAfter();
+      if (interp.commitTimer) clearTimeout(interp.commitTimer);
+      interp.commitTimer = setTimeout(() => interp.commit(), 1400);
+    },
+    ensureLiveTurn() {
+      if (interp.liveTurnId != null) return;
+      const t = interpreterTarget(); const L = lang(t);
+      const id = ++turnId; interp.liveTurnId = id;
+      S().turns.push({ id, kind: 'out', srcShort: '🎙', original: '', rows: [{ flag: L.flag, label: langName(t, L.label), textHTML: '', language: t, text: '', tokens: [] }], pending: false, live: true, time: clock() });
+      scrollAfter();
+    },
+    commit() {
+      if (interp.commitTimer) { clearTimeout(interp.commitTimer); interp.commitTimer = null; }
+      if (interp.liveTurnId != null) { const idx = S().turns.findIndex((t) => t.id === interp.liveTurnId); if (idx >= 0) S().turns[idx].live = false; }
+      interp.liveTurnId = null; interp.srcBuf = ''; interp.dstBuf = '';
+      S().interpreter.liveSrc = ''; S().interpreter.liveDst = '';
+    },
+    close() {
+      interp.commit();
+      const ws = interp.ws;
+      if (ws) { try { ws.send(JSON.stringify({ cmd: 'stop' })); ws.close(); } catch (_) {} interp.ws = null; }
+      play.stop(); S().interpreter.active = false;
+    },
+  };
+
   function makeLane(kind, onClip) {
     const st = () => S().lanes[kind];
     const lane = { kind, audioCtx: null, stream: null, proc: null, silent: null, ws: null, runtime: null, meter: null, queue: [], draining: false };
@@ -152,7 +258,10 @@ export function createConversationStore(ctx) {
       onSegment: (clip) => { if (st().enabled) { lane.queue.push(clip); void drain(); } },
     });
     lane.seg = seg;
-    lane.sink = (frames) => { if (detMode === 'streaming') speechStream.feed(kind, frames); else seg.feed(frames); };
+    lane.sink = (frames) => {
+      if (kind === 'mic' && S().interpreter.on) { interp.feed(frames); return; }
+      if (detMode === 'streaming') speechStream.feed(kind, frames); else seg.feed(frames);
+    };
     async function drain() {
       if (lane.draining) return; lane.draining = true;
       try {
@@ -230,12 +339,27 @@ export function createConversationStore(ctx) {
       else if (!S().lanes.sys.device) S().lanes.sys.device = S().lanes.sys.devices[0].id;
     } catch (_) { S().lanes.sys.devices = [{ id: '', label: '(outputs unavailable)' }]; }
   }
+  // Output sinks for interpreter voice playout — browser audiooutput device ids
+  // (setSinkId), distinct from the Go-side WASAPI loopback devices above. Labels
+  // only populate after mic permission is granted (first getUserMedia).
+  async function populateSinks() {
+    if (!navigator.mediaDevices?.enumerateDevices) return;
+    const outs = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'audiooutput');
+    S().interpreter.outputDevices = outs.map((d, i) => ({ id: d.deviceId, label: d.label || ('Output ' + (i + 1)) }));
+    let saved = ''; try { saved = localStorage.getItem('pt.interpreter.device') || ''; } catch (_) {}
+    if (saved && S().interpreter.outputDevices.some((o) => o.id === saved)) S().interpreter.outputDevice = saved;
+    else if (!S().interpreter.outputDevice && S().interpreter.outputDevices.length) S().interpreter.outputDevice = S().interpreter.outputDevices[0].id;
+  }
 
   async function startListen() {
     await refreshCfg();
     if (detMode === 'streaming') { const ok = await speechStream.warm(clipMaxSec); if (!ok) detMode = 'filter'; }
     if (detMode === 'filter') speechGate.warm();
     S().listening = true;
+    if (S().interpreter.on && S().lanes.mic.enabled) {
+      try { await interp.open(); }
+      catch (e) { S().interpreter.on = false; ctx.Toasts?.push?.({ title: tt('conv.interpFailed'), msg: e?.message || String(e) }); }
+    }
     const errs = [];
     for (const lane of [micLane, sysLane]) {
       if (!S().lanes[lane.kind].enabled) continue;
@@ -246,10 +370,10 @@ export function createConversationStore(ctx) {
     if (cfg.desktopOverlay) { try { await fetch('/api/desktop-overlay/start', { method: 'POST' }); await fetch('/api/audio/apply-overlay-layout', { method: 'POST' }); } catch (_) {} }
     if (cfg.openvr) { try { await fetch('/api/overlay/start', { method: 'POST' }); } catch (_) {} }
     setStatus(tt('run.status.Listening'));
-    if (S().lanes.mic.enabled) populateMics().catch(() => {});
+    if (S().lanes.mic.enabled) { populateMics().catch(() => {}); populateSinks().catch(() => {}); }
   }
   function stopListen() {
-    S().listening = false; micLane.stop(); sysLane.stop();
+    S().listening = false; interp.close(); micLane.stop(); sysLane.stop();
     fetch('/api/desktop-overlay/clear', { method: 'POST' }).catch(() => {});
     fetch('/api/overlay/clear', { method: 'POST' }).catch(() => {});
     setStatus(tt('conv.statusStopped'));
@@ -268,8 +392,10 @@ export function createConversationStore(ctx) {
     status: '',
     composer: '',
     lanes: { mic: { enabled: true, devices: [], device: '' }, sys: { enabled: true, devices: [], device: '' } },
+    interpreter: { on: false, active: false, echo: false, outputDevices: [], outputDevice: '', liveSrc: '', liveDst: '' },
     get empty() { return this.turns.length === 0; },
     get statusText() { return this.status || (this.listening ? tt('run.status.Listening') : tt('run.status.Idle')); },
+    get interpreterTargetLabel() { const t = interpreterTarget(); const L = lang(t); return L.flag + ' ' + langName(t, L.label); },
 
     async toggleListen() {
       if (busy) return; busy = true;
@@ -292,6 +418,30 @@ export function createConversationStore(ctx) {
     },
     sendComposer(text) { this.composer = ''; sendOutgoing(text || ''); },
 
+    // Interpreter mode: a live-translation switch layered on the mic lane. The
+    // mic lane's frame sink checks interpreter.on per frame, so toggling while
+    // listening just opens/closes the Gemini bridge — no lane restart needed.
+    async toggleInterpreter() {
+      const on = !this.interpreter.on;
+      this.interpreter.on = on;
+      if (!this.listening) return;
+      if (on) {
+        if (this.lanes.mic.enabled) {
+          try { await interp.open(); }
+          catch (e) { this.interpreter.on = false; ctx.Toasts?.push?.({ title: tt('conv.interpFailed'), msg: e?.message || String(e) }); }
+        }
+      } else interp.close();
+    },
+    setInterpreterEcho(v) {
+      this.interpreter.echo = !!v;
+      try { localStorage.setItem('pt.interpreter.echo', v ? '1' : '0'); } catch (_) {}
+      if (this.listening && this.interpreter.on && interp.ws) { interp.close(); if (this.lanes.mic.enabled) interp.open().catch((e) => setStatus(String(e?.message || e))); }
+    },
+    changeInterpreterDevice() {
+      try { localStorage.setItem('pt.interpreter.device', this.interpreter.outputDevice || ''); } catch (_) {}
+      play.setSink(this.interpreter.outputDevice);
+    },
+
     _simulateIncoming(text, detected) { return renderIncoming(text, detected); },
     _langs() { return { my: myLang, others: otherLangs.slice(), incomingHint: incomingHint() }; },
 
@@ -313,6 +463,8 @@ export function createConversationStore(ctx) {
       syncOverlaysFromSettings().catch(() => {});
       await populateMics().catch(() => {});
       await populateOutputs().catch(() => {});
+      await populateSinks().catch(() => {});
+      try { this.interpreter.echo = localStorage.getItem('pt.interpreter.echo') === '1'; } catch (_) {}
       document.addEventListener('audioprefschange', (e) => { const d = e.detail || {}; if (Number(d.vad_sensitivity) > 0) vadPct = Number(d.vad_sensitivity); if (typeof d.speech_detection === 'string' && d.speech_detection !== detMode) { detMode = d.speech_detection; if (S().listening) restartLanes(); } if (Number(d.clip_max_sec) > 0) clipMaxSec = Number(d.clip_max_sec); });
       setStatus(tt('conv.statusIdle'));
     },

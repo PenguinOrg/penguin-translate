@@ -4,4 +4,4 @@ package host
 
 import "context"
 
-func StartNativeLoopbackSidecar(context.Context) {}
+func StartNativeLoopbackSidecar(context.Context, ...SidecarRoute) {}

@@ -333,7 +333,7 @@ export function createPrefsStore(ctx) {
       if (p) this.saveAudio({ ...p.patch });
     },
     removeKey(which) {
-      const flag = { openai: 'remove_openai_key', openrouter: 'remove_openrouter_key', dashscope: 'remove_dashscope_key', deepgram: 'remove_deepgram_key', azure: 'remove_azure_key' }[which];
+      const flag = { openai: 'remove_openai_key', openrouter: 'remove_openrouter_key', dashscope: 'remove_dashscope_key', deepgram: 'remove_deepgram_key', azure: 'remove_azure_key', gemini: 'remove_gemini_key' }[which];
       if (flag) this.save({ [flag]: true });
     },
     // Keys are write-only: GET /api/settings only reports *_key_configured, so the

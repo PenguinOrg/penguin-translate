@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 
 	audiohost "translation-overlay/internal/feature/audio/host"
+	livetranslate "translation-overlay/internal/feature/livetranslate"
 	mictranslatehost "translation-overlay/internal/feature/mictranslate/host"
 	windowhost "translation-overlay/internal/feature/window/host"
 	"translation-overlay/internal/platform/persist"
@@ -16,6 +17,7 @@ type App struct {
 	MicTranslate *mictranslatehost.Host
 	Audio        *audiohost.Host
 	Window       *windowhost.Host
+	Live         *livetranslate.Host
 }
 
 func New(dataDir string) (*App, error) {
@@ -33,5 +35,6 @@ func New(dataDir string) (*App, error) {
 		MicTranslate: mictranslatehost.New(repo),
 		Audio:        audiohost.New(repo),
 		Window:       windowhost.New(repo),
+		Live:         livetranslate.New(repo),
 	}, nil
 }

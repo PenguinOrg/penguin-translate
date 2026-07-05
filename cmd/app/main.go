@@ -71,8 +71,10 @@ func main() {
 		}()
 	}
 
+	liveMicRoute := audiohost.SidecarRoute{Pattern: "/ws/live-mic", Handler: app.Live.HandleMicWS}
+
 	if *httpAddr != "" {
-		audiohost.StartNativeLoopbackSidecar(engineCtx)
+		audiohost.StartNativeLoopbackSidecar(engineCtx, liveMicRoute)
 		startEngine()
 		go func() {
 			sig := make(chan os.Signal, 1)
@@ -104,7 +106,7 @@ func main() {
 		},
 		BackgroundColour: &options.RGBA{R: 12, G: 14, B: 18, A: 255},
 		OnStartup: func(ctx context.Context) {
-			audiohost.StartNativeLoopbackSidecar(engineCtx)
+			audiohost.StartNativeLoopbackSidecar(engineCtx, liveMicRoute)
 			startEngine()
 		},
 		OnBeforeClose: func(_ context.Context) bool {

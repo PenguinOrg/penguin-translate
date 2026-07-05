@@ -17,13 +17,13 @@ import (
 
 var sidecarOnce sync.Once
 
-func StartNativeLoopbackSidecar(ctx context.Context) {
+func StartNativeLoopbackSidecar(ctx context.Context, extra ...SidecarRoute) {
 	sidecarOnce.Do(func() {
-		go serveLoopbackSidecar(ctx)
+		go serveLoopbackSidecar(ctx, extra)
 	})
 }
 
-func serveLoopbackSidecar(ctx context.Context) {
+func serveLoopbackSidecar(ctx context.Context, extra []SidecarRoute) {
 	base := audiosys.NativeLoopbackBaseURL()
 	u, err := url.Parse(base)
 	if err != nil {
@@ -47,6 +47,11 @@ func serveLoopbackSidecar(ctx context.Context) {
 		_, _ = w.Write([]byte(`{"ok":"true","loopback":"native","port":"` + port + `"}`))
 	})
 	mux.HandleFunc("/ws/loopback", handleNativeLoopbackWS)
+	for _, rt := range extra {
+		if rt.Pattern != "" && rt.Handler != nil {
+			mux.HandleFunc(rt.Pattern, rt.Handler)
+		}
+	}
 
 	srv := &http.Server{
 		Addr:              addr,
