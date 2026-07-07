@@ -153,7 +153,7 @@ export function createPrefsStore(ctx) {
     status: '',
     statusErr: false,
     loadBtnBusy: false,
-    oscDraft: { enabled: false, host: '127.0.0.1', port: 9000, include_original: false, notification: true, pace_cps: 15, pace_min_seconds: 1.5, pace_max_seconds: 7 },
+    oscDraft: { enabled: false, host: '127.0.0.1', port: 9000, include_original: false, notification: true, pace_cps: 15, pace_min_seconds: 1.5, pace_max_seconds: 7, pace_cjk_factor: 2 },
     diag: { line: '', tail: '' },
     vrStatus: { running: false, ok: false, detail: '', error: '' },
     TRANSCRIBE: TRANSCRIBE_MODELS,
@@ -258,7 +258,7 @@ export function createPrefsStore(ctx) {
     },
     syncOscDraft() {
       const o = (this.practice.plugins || {}).vrchat_osc || {};
-      this.oscDraft = { enabled: !!o.enabled, host: o.host || '127.0.0.1', port: Number(o.port) || 9000, include_original: !!o.include_original, notification: o.notification !== false, pace_cps: Number(o.pace_cps) || 15, pace_min_seconds: o.pace_min_seconds != null ? Number(o.pace_min_seconds) : 1.5, pace_max_seconds: Number(o.pace_max_seconds) || 7 };
+      this.oscDraft = { enabled: !!o.enabled, host: o.host || '127.0.0.1', port: Number(o.port) || 9000, include_original: !!o.include_original, notification: o.notification !== false, pace_cps: Number(o.pace_cps) || 15, pace_min_seconds: o.pace_min_seconds != null ? Number(o.pace_min_seconds) : 1.5, pace_max_seconds: Number(o.pace_max_seconds) || 7, pace_cjk_factor: Number(o.pace_cjk_factor) || 2 };
     },
 
     async show(id) { this.open = true; if (!this.loaded) await this.loadAll(); this.select(id || this.cat || 'languages'); },
@@ -349,7 +349,8 @@ export function createPrefsStore(ctx) {
       const d = this.oscDraft;
       const num = (v, dflt) => { const n = Number(v); return Number.isFinite(n) && n >= 0 ? n : dflt; };
       const cfg = { ...d, port: Number(d.port) || 9000, host: d.host || '127.0.0.1',
-        pace_cps: num(d.pace_cps, 15) || 15, pace_min_seconds: num(d.pace_min_seconds, 1.5), pace_max_seconds: num(d.pace_max_seconds, 7) || 7 };
+        pace_cps: num(d.pace_cps, 15) || 15, pace_min_seconds: num(d.pace_min_seconds, 1.5), pace_max_seconds: num(d.pace_max_seconds, 7) || 7,
+        pace_cjk_factor: num(d.pace_cjk_factor, 2) || 2 };
       this.save({ practice: { plugins: { vrchat_osc: cfg } } });
     },
     async sendOscTest() {

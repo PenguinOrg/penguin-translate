@@ -8,11 +8,11 @@ import (
 )
 
 const (
-	defaultPaceCPS = 15.0
-	defaultPaceMin = 1.5
-	defaultPaceMax = 7.0
-	cjkSlowdown    = 2.0
-	maxPaceQueue   = 16
+	defaultPaceCPS   = 15.0
+	defaultPaceMin   = 1.5
+	defaultPaceMax   = 7.0
+	defaultCJKFactor = 2.0
+	maxPaceQueue     = 16
 )
 
 type paceItem struct {
@@ -78,9 +78,12 @@ func capQueue(q []paceItem, max int) []paceItem {
 	return q
 }
 
-func holdFor(text string, cps, minSec, maxSec float64) time.Duration {
+func holdFor(text string, cps, minSec, maxSec, cjkFactor float64) time.Duration {
 	if cps <= 0 {
 		cps = defaultPaceCPS
+	}
+	if cjkFactor <= 0 {
+		cjkFactor = defaultCJKFactor
 	}
 	var other, cjk float64
 	for _, r := range text {
@@ -90,7 +93,7 @@ func holdFor(text string, cps, minSec, maxSec float64) time.Duration {
 			other++
 		}
 	}
-	secs := other/cps + cjk/(cps/cjkSlowdown)
+	secs := other/cps + cjk*cjkFactor/cps
 	if minSec > 0 && secs < minSec {
 		secs = minSec
 	}

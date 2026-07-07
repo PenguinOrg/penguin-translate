@@ -178,10 +178,11 @@ export default {
   'prefs.int.testFailed': 'OSC テストに失敗しました',
   'prefs.int.testTitleOn': 'VRChat のチャットボックスにテスト行を送信',
   'prefs.int.testTitleOff': '先に VRChat OSC を有効にしてください',
-  'prefs.int.paceHint': '各行を読み切れる時間だけ表示してから次の行に切り替えます。続けて届いた行は上書きせず順番に表示されます。',
+  'prefs.int.paceHint': '各行を読み切れる時間だけ表示してから次の行に切り替えます。続けて届いた行は上書きせず順番に表示されます。速くするには読む速さを上げ、最短表示時間を下げてください。',
   'prefs.int.paceSpeed': '読む速さ（文字／秒）',
   'prefs.int.paceMin': '最短表示時間（秒）',
   'prefs.int.paceMax': '最長表示時間（秒）',
+  'prefs.int.paceCjk': 'CJK 減速（×、1 で同速）',
 
   'prefs.diag.enginePhase': 'エンジンフェーズ: {phase}',
   'prefs.diag.latencyLegend': 'パイプライン遅延',

@@ -13,24 +13,24 @@ import (
 )
 
 func TestHoldForReadingTime(t *testing.T) {
-	if got := holdFor("123456789012345678901234567890", 15, 1.5, 7); got != 2*time.Second {
+	if got := holdFor("123456789012345678901234567890", 15, 1.5, 7, defaultCJKFactor); got != 2*time.Second {
 		t.Errorf("latin reading time = %v, want 2s", got)
 	}
-	if got := holdFor("hi", 15, 1.5, 7); got != 1500*time.Millisecond {
+	if got := holdFor("hi", 15, 1.5, 7, defaultCJKFactor); got != 1500*time.Millisecond {
 		t.Errorf("min floor = %v, want 1.5s", got)
 	}
 	long := make([]byte, 1000)
 	for i := range long {
 		long[i] = 'a'
 	}
-	if got := holdFor(string(long), 15, 1.5, 7); got != 7*time.Second {
+	if got := holdFor(string(long), 15, 1.5, 7, defaultCJKFactor); got != 7*time.Second {
 		t.Errorf("max cap = %v, want 7s", got)
 	}
 }
 
 func TestHoldForCJKIsSlower(t *testing.T) {
-	latin := holdFor("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 15, 0, 60)
-	cjk := holdFor("ああああああああああああああああああああああああああああああ", 15, 0, 60)
+	latin := holdFor("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 15, 0, 60, defaultCJKFactor)
+	cjk := holdFor("ああああああああああああああああああああああああああああああ", 15, 0, 60, defaultCJKFactor)
 	if cjk <= latin {
 		t.Fatalf("cjk hold %v should exceed latin hold %v", cjk, latin)
 	}
@@ -39,8 +39,20 @@ func TestHoldForCJKIsSlower(t *testing.T) {
 	}
 }
 
+// A CJK factor of 1 removes the slow-down: CJK text then paces like latin text.
+func TestHoldForCJKFactorConfigurable(t *testing.T) {
+	latin := holdFor("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 15, 0, 60, 1)
+	cjk := holdFor("ああああああああああああああああああああああああああああああ", 15, 0, 60, 1)
+	if cjk != latin {
+		t.Fatalf("with factor 1, cjk hold %v should equal latin hold %v", cjk, latin)
+	}
+	if cjk != 2*time.Second {
+		t.Errorf("cjk hold at factor 1 = %v, want 2s", cjk)
+	}
+}
+
 func TestHoldForDefaultsOnBadCPS(t *testing.T) {
-	if got := holdFor("hello world", 0, 0, 60); got != holdFor("hello world", defaultPaceCPS, 0, 60) {
+	if got := holdFor("hello world", 0, 0, 60, defaultCJKFactor); got != holdFor("hello world", defaultPaceCPS, 0, 60, defaultCJKFactor) {
 		t.Errorf("cps<=0 should fall back to default: %v", got)
 	}
 }

@@ -237,9 +237,16 @@ export function createConversationStore(ctx) {
     },
     commit() {
       if (interp.commitTimer) { clearTimeout(interp.commitTimer); interp.commitTimer = null; }
+      const src = interp.srcBuf, dst = interp.dstBuf, target = interpreterTarget();
       if (interp.liveTurnId != null) { const idx = S().turns.findIndex((t) => t.id === interp.liveTurnId); if (idx >= 0) S().turns[idx].live = false; }
       interp.liveTurnId = null; interp.srcBuf = ''; interp.dstBuf = '';
       S().interpreter.liveSrc = ''; S().interpreter.liveDst = '';
+      // Fan the finished turn out to plugins (VRChat OSC chatbox, etc.). Gemini
+      // already translated it; the server only dispatches, it doesn't re-translate.
+      if (dst && dst.trim()) {
+        fetch('/api/live/commit', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ source_text: src, target_language: target, target_text: dst }) }).catch(() => {});
+      }
     },
     close() {
       interp.commit();

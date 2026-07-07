@@ -87,6 +87,50 @@ func handleVRChatOscSend(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]string{"ok": "true"})
 }
 
+type liveCommitJSON struct {
+	SourceText     string `json:"source_text"`
+	TargetLanguage string `json:"target_language"`
+	TargetText     string `json:"target_text"`
+}
+
+// handleLiveCommit feeds one committed Interpreter turn (Gemini Live Translate)
+// into the plugin bus as a from-self conversation reply, so VRChat OSC and any
+// other plugin receive interpreter output the same way they receive typed/multi
+// translations. The text is already translated upstream by Gemini — this only
+// fans it out, it does not re-translate.
+func (h *Host) handleLiveCommit(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	const max = 16 << 10
+	body, err := io.ReadAll(io.LimitReader(r.Body, max+1))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if len(body) > max {
+		http.Error(w, "body too large", http.StatusRequestEntityTooLarge)
+		return
+	}
+	var in liveCommitJSON
+	if err := json.Unmarshal(body, &in); err != nil {
+		http.Error(w, "invalid JSON", http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	target := strings.TrimSpace(in.TargetText)
+	tgt, ok := languages.Lang(in.TargetLanguage)
+	if target == "" || !ok {
+		_ = json.NewEncoder(w).Encode(map[string]bool{"ok": true})
+		return
+	}
+	srcCanon := languages.CanonicalID(h.readSettingsFromDisk().MyLanguage)
+	row := map[string]any{"language": tgt.ID, "label": tgt.Label, "text": target}
+	dispatchConversationReply(r, srcCanon, strings.TrimSpace(in.SourceText), []map[string]any{row})
+	_ = json.NewEncoder(w).Encode(map[string]bool{"ok": true})
+}
+
 func (h *Host) dispatchTranslationPlugins(r *http.Request, payload map[string]any) {
 	s := h.readSettingsFromDisk()
 	prof := languages.Get(s.TargetLanguage)

@@ -70,6 +70,7 @@ func (h *Host) MountRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/languages", handleLanguages)
 	mux.HandleFunc("/api/plugins", handlePluginsList)
 	mux.HandleFunc("/api/plugins/vrchat-osc/send", handleVRChatOscSend)
+	mux.HandleFunc("/api/live/commit", h.handleLiveCommit)
 	mux.HandleFunc("/api/debug/logs", h.handleDebugLogs)
 	mux.HandleFunc("/api/launcher-status", engine.HandleLauncherStatus)
 	mux.HandleFunc("/api/health-summary", h.handleHealthSummary)

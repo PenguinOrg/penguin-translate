@@ -178,10 +178,11 @@ export default {
   'prefs.int.testFailed': 'OSC 测试失败',
   'prefs.int.testTitleOn': '向 VRChat 聊天框发送测试行',
   'prefs.int.testTitleOff': '请先启用 VRChat OSC',
-  'prefs.int.paceHint': '让每一行在屏幕上停留足够阅读的时间，再被下一行替换。连续涌入的多行会依次排队，而不会互相覆盖。',
+  'prefs.int.paceHint': '让每一行在屏幕上停留足够阅读的时间，再被下一行替换。连续涌入的多行会依次排队，而不会互相覆盖。想要更快，可调高阅读速度并调低最短停留时间。',
   'prefs.int.paceSpeed': '阅读速度（字符／秒）',
   'prefs.int.paceMin': '最短停留时间（秒）',
   'prefs.int.paceMax': '最长停留时间（秒）',
+  'prefs.int.paceCjk': 'CJK 减速（×，1 为同速）',
 
   'prefs.diag.enginePhase': '引擎阶段：{phase}',
   'prefs.diag.latencyLegend': '流水线延迟',

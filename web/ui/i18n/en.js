@@ -289,10 +289,11 @@ export default {
   'prefs.int.testFailed': 'OSC test failed',
   'prefs.int.testTitleOn': 'Send a test line to the VRChat chatbox',
   'prefs.int.testTitleOff': 'Enable VRChat OSC first',
-  'prefs.int.paceHint': 'Hold each line on screen long enough to read before the next replaces it. Lines that arrive in a burst wait their turn instead of overwriting each other.',
+  'prefs.int.paceHint': 'Hold each line on screen long enough to read before the next replaces it. Lines that arrive in a burst wait their turn instead of overwriting each other. To speed things up, raise the reading speed and lower the minimum.',
   'prefs.int.paceSpeed': 'Reading speed (characters/sec)',
   'prefs.int.paceMin': 'Minimum time on screen (sec)',
   'prefs.int.paceMax': 'Maximum time on screen (sec)',
+  'prefs.int.paceCjk': 'CJK slow-down (×, 1 = same speed)',
 
   'prefs.diag.enginePhase': 'Engine phase: {phase}',
   'prefs.diag.latencyLegend': 'Pipeline latency',

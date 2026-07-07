@@ -178,10 +178,11 @@ export default {
   'prefs.int.testFailed': 'OSC 테스트 실패',
   'prefs.int.testTitleOn': 'VRChat 채팅창에 테스트 줄 보내기',
   'prefs.int.testTitleOff': '먼저 VRChat OSC를 사용 설정하세요',
-  'prefs.int.paceHint': '다음 줄로 바뀌기 전에 각 줄이 읽을 수 있을 만큼 화면에 머무릅니다. 한꺼번에 도착한 줄은 서로 덮어쓰지 않고 차례로 표시됩니다.',
+  'prefs.int.paceHint': '다음 줄로 바뀌기 전에 각 줄이 읽을 수 있을 만큼 화면에 머무릅니다. 한꺼번에 도착한 줄은 서로 덮어쓰지 않고 차례로 표시됩니다. 더 빠르게 하려면 읽기 속도를 높이고 최소 표시 시간을 낮추세요.',
   'prefs.int.paceSpeed': '읽기 속도(글자/초)',
   'prefs.int.paceMin': '최소 표시 시간(초)',
   'prefs.int.paceMax': '최대 표시 시간(초)',
+  'prefs.int.paceCjk': 'CJK 감속(×, 1이면 동일 속도)',
 
   'prefs.diag.enginePhase': '엔진 단계: {phase}',
   'prefs.diag.latencyLegend': '파이프라인 지연',

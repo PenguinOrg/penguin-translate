@@ -31,6 +31,7 @@ type Config struct {
 	PaceCPS         float64 `json:"pace_cps"`
 	PaceMinSeconds  float64 `json:"pace_min_seconds"`
 	PaceMaxSeconds  float64 `json:"pace_max_seconds"`
+	PaceCJKFactor   float64 `json:"pace_cjk_factor"`
 }
 
 func defaultConfig() Config {
@@ -43,6 +44,7 @@ func defaultConfig() Config {
 		PaceCPS:        defaultPaceCPS,
 		PaceMinSeconds: defaultPaceMin,
 		PaceMaxSeconds: defaultPaceMax,
+		PaceCJKFactor:  defaultCJKFactor,
 	}
 }
 
@@ -85,6 +87,9 @@ func (p *Plugin) ApplyConfig(raw json.RawMessage) error {
 	if next.PaceMaxSeconds < next.PaceMinSeconds {
 		next.PaceMaxSeconds = next.PaceMinSeconds
 	}
+	if next.PaceCJKFactor <= 0 {
+		next.PaceCJKFactor = defaultCJKFactor
+	}
 	p.mu.Lock()
 	p.cfg = next
 	p.mu.Unlock()
@@ -106,6 +111,7 @@ func (p *Plugin) PublicConfig() map[string]any {
 		"pace_cps":         p.cfg.PaceCPS,
 		"pace_min_seconds": p.cfg.PaceMinSeconds,
 		"pace_max_seconds": p.cfg.PaceMaxSeconds,
+		"pace_cjk_factor":  p.cfg.PaceCJKFactor,
 	}
 }
 
@@ -146,7 +152,7 @@ func (p *Plugin) Handle(ctx context.Context, ev plugin.Event) error {
 		port:         cfg.Port,
 		text:         text,
 		notification: cfg.Notification,
-		hold:         holdFor(text, cfg.PaceCPS, cfg.PaceMinSeconds, cfg.PaceMaxSeconds),
+		hold:         holdFor(text, cfg.PaceCPS, cfg.PaceMinSeconds, cfg.PaceMaxSeconds, cfg.PaceCJKFactor),
 	})
 	return nil
 }
@@ -277,6 +283,9 @@ func ConfigFromPublic(m map[string]any) Config {
 	}
 	if v, ok := m["pace_max_seconds"].(float64); ok {
 		cfg.PaceMaxSeconds = v
+	}
+	if v, ok := m["pace_cjk_factor"].(float64); ok {
+		cfg.PaceCJKFactor = v
 	}
 	return cfg
 }
