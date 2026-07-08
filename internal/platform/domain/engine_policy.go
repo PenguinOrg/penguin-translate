@@ -62,6 +62,8 @@ func normalizeASREnginePolicy(v string) string {
 		return "openrouter"
 	case "deepgram", "dg":
 		return "deepgram"
+	case "dashscope", "ds":
+		return "dashscope"
 	default:
 		return "whisper"
 	}

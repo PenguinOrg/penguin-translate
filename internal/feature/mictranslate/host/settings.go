@@ -151,6 +151,8 @@ func normalizeASREngine(v string) string {
 		return "openrouter"
 	case "deepgram", "dg":
 		return "deepgram"
+	case "dashscope", "ds":
+		return "dashscope"
 	default:
 		return "whisper"
 	}
@@ -242,6 +244,8 @@ func normalizeSettings(s settingsFile) settingsFile {
 			s.TranscribeModel = s.OpenRouterTranscribeModel
 		} else if s.EnglishASREngine == "deepgram" {
 			s.TranscribeModel = "nova-2"
+		} else if s.EnglishASREngine == "dashscope" {
+			s.TranscribeModel = "qwen3-asr-flash"
 		} else if s.EnglishASREngine == "openai" || s.EnglishASREngine == "openai_whisper" {
 			if s.EnglishASREngine == "openai_whisper" {
 				s.TranscribeModel = s.OpenAIWhisperModel

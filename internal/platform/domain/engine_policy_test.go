@@ -41,6 +41,16 @@ func TestMicTranslateLocalModelNeeds(t *testing.T) {
 			},
 		},
 		{
+			name: "split, dashscope cloud ASR needs no local model",
+			in: MicTranslateSettings{
+				PracticeEnabled:   true,
+				ForwardTranslator: "openai",
+				EnglishASREngine:  "dashscope",
+				PipelineMode:      "split",
+				Backtranslate:     "openai",
+			},
+		},
+		{
 			name: "split, nllb forward translator",
 			in: MicTranslateSettings{
 				PracticeEnabled:   true,
@@ -195,6 +205,20 @@ func TestRequiresManagedEngine(t *testing.T) {
 			want: false,
 		},
 		{
+			name: "dashscope mic ASR stays cloud-native",
+			st: Settings{
+				MicTranslate: MicTranslateSettings{
+					PracticeEnabled:   true,
+					ForwardTranslator: "openai",
+					EnglishASREngine:  "dashscope",
+					PipelineMode:      "split",
+					Backtranslate:     "openai",
+				},
+				Window: cloudWindow,
+			},
+			want: false,
+		},
+		{
 			name: "window uses local nllb",
 			st:   Settings{MicTranslate: cloudMicTranslate, Window: WindowSettings{TranslateBackend: "nllb"}},
 			want: true,
@@ -237,6 +261,9 @@ func TestNormalizeASREnginePolicy(t *testing.T) {
 		"deepgram":       "deepgram",
 		"dg":             "deepgram",
 		"  Deepgram  ":   "deepgram",
+		"dashscope":      "dashscope",
+		"ds":             "dashscope",
+		"  DashScope  ":  "dashscope",
 		"whisper":        "whisper",
 		"":               "whisper",
 		"something-else": "whisper",

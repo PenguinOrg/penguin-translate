@@ -4,6 +4,7 @@ import { rmsToScale } from '/ui/shared/dsp.js';
 
 const TRANSCRIBE_MODELS = [
   { v: 'qwen/qwen3-asr-flash-2026-02-10', t: 'Qwen3 ASR Flash (OpenRouter)' },
+  { v: 'qwen3-asr-flash', t: 'Qwen3 ASR Flash (DashScope)' },
   { v: 'mistralai/voxtral-mini-transcribe', t: 'Voxtral Mini Transcribe (OpenRouter)' },
   { v: 'openai/whisper-large-v3', t: 'Whisper large-v3 (OpenRouter)' },
   { v: 'nova-2', t: 'Nova-2 — broad languages (Deepgram)' },
@@ -14,6 +15,7 @@ const TRANSCRIBE_MODELS = [
 ];
 const MIC_ASR_DEFAULTS = {
   openrouter: 'qwen/qwen3-asr-flash-2026-02-10',
+  dashscope: 'qwen3-asr-flash',
   openai: 'gpt-4o-mini-transcribe',
   deepgram: 'nova-2',
 };
@@ -24,6 +26,9 @@ const PRACTICE_ASR_MODELS = {
     { v: 'qwen/qwen3-asr-flash-2026-02-10', t: 'Qwen3 ASR Flash (OpenRouter)' },
     { v: 'mistralai/voxtral-mini-transcribe', t: 'Voxtral Mini Transcribe (OpenRouter)' },
     { v: 'openai/whisper-large-v3', t: 'Whisper large-v3 (OpenRouter)' },
+  ],
+  dashscope: [
+    { v: 'qwen3-asr-flash', t: 'Qwen3 ASR Flash (DashScope)' },
   ],
   openai: [
     { v: 'gpt-4o-mini-transcribe', t: 'GPT-4o mini transcribe (OpenAI)' },
@@ -184,7 +189,7 @@ export function createPrefsStore(ctx) {
     get assessmentModeOpts() { return [{ v: 'basic', t: tt('prefs.prac.modeBasic') }, { v: 'azure', t: tt('prefs.prac.modeAzure') }]; },
 
     get providerOpts() { return [{ v: 'openrouter', t: 'OpenRouter' }, { v: 'openai', t: 'OpenAI' }]; },
-    get micAsrProviderOpts() { return [{ v: 'openrouter', t: 'OpenRouter' }, { v: 'openai', t: 'OpenAI' }, { v: 'deepgram', t: 'Deepgram · Nova' }]; },
+    get micAsrProviderOpts() { return [{ v: 'dashscope', t: 'DashScope · Qwen' }, { v: 'deepgram', t: 'Deepgram · Nova' }, { v: 'openrouter', t: 'OpenRouter' }, { v: 'openai', t: 'OpenAI' }]; },
     get micAsrEngine() { return this.practice.english_asr_engine || 'openrouter'; },
     get captionProviderOpts() { return [{ v: 'dashscope', t: 'DashScope · Qwen (context)' }, { v: 'deepgram', t: 'Deepgram · Nova' }, { v: 'openrouter', t: 'OpenRouter' }, { v: 'openai', t: 'OpenAI' }]; },
     get translateProviderOpts() { return [{ v: 'openai', t: 'OpenAI' }, { v: 'openrouter', t: 'OpenRouter' }, { v: 'dashscope', t: 'DashScope · Qwen' }]; },

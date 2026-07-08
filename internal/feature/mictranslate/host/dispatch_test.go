@@ -2,13 +2,9 @@ package host
 
 import "testing"
 
-// cloudOnlyASR must single out engines the managed Python engine cannot serve.
-// Deepgram has no local/Python ASR path, so a Deepgram mic request must always
-// take the Go native-cloud route — even when the sidecar is up for an unrelated
-// local need (NLLB backtranslate, window translate). Whisper/OpenAI/OpenRouter
-// are all serviceable by Python, so they must NOT be forced native-cloud.
+// Providers unsupported by the Python sidecar must use native-cloud ASR.
 func TestCloudOnlyASR(t *testing.T) {
-	cloudOnly := []string{"deepgram", "dg", "  Deepgram  ", "DG"}
+	cloudOnly := []string{"deepgram", "dg", "  Deepgram  ", "DG", "dashscope", "ds", "  DashScope  "}
 	for _, e := range cloudOnly {
 		if !cloudOnlyASR(e) {
 			t.Errorf("cloudOnlyASR(%q) = false, want true", e)

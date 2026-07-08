@@ -17,7 +17,6 @@ type Settings struct {
 	JaRepeatASREngine         string
 	Backtranslate             string
 	PracticeEnabled           bool
-	APIProvider               string
 	TranscribeModel           string
 	TranslateModel            string
 	OpenAIForwardModel        string
@@ -25,24 +24,7 @@ type Settings struct {
 	OpenAITranscribeModel     string
 	OpenAIWhisperModel        string
 	OpenRouterTranscribeModel string
-	OpenAIKey                 string
-	OpenAIBase                string
-	OpenRouterKey             string
-	OpenRouterBase            string
-	DeepgramKey               string
-	DeepgramBase              string
-}
-
-func (s Settings) ToCredentials() cloudapi.Credentials {
-	return cloudapi.Credentials{
-		OpenAIKey:      s.OpenAIKey,
-		OpenAIBase:     s.OpenAIBase,
-		OpenRouterKey:  s.OpenRouterKey,
-		OpenRouterBase: s.OpenRouterBase,
-		DeepgramKey:    s.DeepgramKey,
-		DeepgramBase:   s.DeepgramBase,
-		APIProvider:    s.APIProvider,
-	}
+	Credentials               cloudapi.Credentials
 }
 
 func (s Settings) targetKind() string {
@@ -77,6 +59,8 @@ func (s Settings) transcribeModel(asrEngine string) string {
 		return strings.TrimSpace(s.OpenRouterTranscribeModel)
 	case "deepgram":
 		return "nova-2"
+	case "dashscope":
+		return "qwen3-asr-flash"
 	default:
 		if strings.TrimSpace(s.OpenAITranscribeModel) != "" {
 			return strings.TrimSpace(s.OpenAITranscribeModel)
@@ -106,7 +90,7 @@ func TranslateEnglish(s Settings, english string) (TranslateResult, error) {
 	var err error
 	if english != "" {
 		if strings.ToLower(strings.TrimSpace(s.ForwardTranslator)) == "openai" {
-			target, err = cloudapi.TranslateEnglishToTarget(s.ToCredentials(), s.forwardModel(), kind, english)
+			target, err = cloudapi.TranslateEnglishToTarget(s.Credentials, s.forwardModel(), kind, english)
 		} else {
 			return nil, fmt.Errorf("local NLLB forward translation requires the Python engine")
 		}
@@ -124,7 +108,7 @@ func TranslateEnglish(s Settings, english string) (TranslateResult, error) {
 	back := ""
 	bt := effectiveBacktranslate(s)
 	if target != "" && bt == "openai" {
-		back, err = cloudapi.BacktranslateTargetToEnglish(s.ToCredentials(), s.backModel(), kind, target)
+		back, err = cloudapi.BacktranslateTargetToEnglish(s.Credentials, s.backModel(), kind, target)
 		if err != nil {
 			back = ""
 		}
@@ -180,7 +164,7 @@ func TranslateOne(s Settings, srcID, tgtID, text string) (map[string]any, error)
 	if strings.ToLower(strings.TrimSpace(s.ForwardTranslator)) != "openai" {
 		return nil, fmt.Errorf("local NLLB translation requires the Python engine")
 	}
-	translated, err := cloudapi.Translate(s.ToCredentials(), s.forwardModel(), srcLabel, tgt.Label, text)
+	translated, err := cloudapi.Translate(s.Credentials, s.forwardModel(), srcLabel, tgt.Label, text)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +194,7 @@ func TranslateMulti(s Settings, srcID string, tgtIDs []string, text string) ([]m
 
 func PipelineFromWAV(s Settings, wav []byte, speechLang string) (TranslateResult, error) {
 	asr := s.EnglishASREngine
-	text, det, err := cloudapi.CloudTranscribe(s.ToCredentials(), asr, s.transcribeModel(asr), speechLang, wav)
+	text, det, err := cloudapi.CloudTranscribe(s.Credentials, asr, s.transcribeModel(asr), speechLang, wav)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +218,7 @@ func TranscribeWAV(s Settings, wav []byte, language string) (map[string]any, err
 	if strings.TrimSpace(asr) == "" {
 		asr = s.EnglishASREngine
 	}
-	text, det, err := cloudapi.CloudTranscribe(s.ToCredentials(), asr, s.transcribeModel(asr), language, wav)
+	text, det, err := cloudapi.CloudTranscribe(s.Credentials, asr, s.transcribeModel(asr), language, wav)
 	if err != nil {
 		return nil, err
 	}

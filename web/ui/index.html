@@ -500,6 +500,15 @@
                     </div>
                   </div>
                 </template>
+                <template x-if="s.micAsrEngine === 'dashscope'">
+                  <div class="field">
+                    <label x-text="$store.i18n.t('prefs.cap.dashscopeKey')"></label>
+                    <div class="key-row">
+                      <input type="text" autocomplete="off" spellcheck="false" :placeholder="settings.dashscope_key_configured ? $store.i18n.t('prefs.keySet') : 'DashScope API key'" @change="s.saveKey('dashscope_api_key', $event.target)">
+                      <button class="key-remove" @click="s.removeKey('dashscope')" x-text="$store.i18n.t('common.remove')"></button>
+                    </div>
+                  </div>
+                </template>
                 <div class="field">
                   <label x-text="$store.i18n.t('prefs.inf.geminiKey')"></label>
                   <div class="key-row">
@@ -585,6 +594,11 @@
                 <template x-if="s.micAsrEngine === 'deepgram'">
                   <div class="field"><label x-text="$store.i18n.t('prefs.cap.deepgramKey')"></label>
                     <div class="key-row"><input type="text" autocomplete="off" spellcheck="false" :placeholder="settings.deepgram_key_configured ? $store.i18n.t('prefs.keySet') : 'Deepgram API key'" @change="s.saveKey('deepgram_api_key', $event.target)"><button class="key-remove" @click="s.removeKey('deepgram')" x-text="$store.i18n.t('common.remove')"></button></div>
+                  </div>
+                </template>
+                <template x-if="s.micAsrEngine === 'dashscope'">
+                  <div class="field"><label x-text="$store.i18n.t('prefs.cap.dashscopeKey')"></label>
+                    <div class="key-row"><input type="text" autocomplete="off" spellcheck="false" :placeholder="settings.dashscope_key_configured ? $store.i18n.t('prefs.keySet') : 'DashScope API key'" @change="s.saveKey('dashscope_api_key', $event.target)"><button class="key-remove" @click="s.removeKey('dashscope')" x-text="$store.i18n.t('common.remove')"></button></div>
                   </div>
                 </template>
               </fieldset>

@@ -23,7 +23,6 @@ func (h *Host) nativeSettingsFromDisk() nativecloud.Settings {
 		JaRepeatASREngine:         s.JaRepeatASREngine,
 		Backtranslate:             s.Backtranslate,
 		PracticeEnabled:           s.PracticeEnabled,
-		APIProvider:               s.APIProvider,
 		TranscribeModel:           s.TranscribeModel,
 		TranslateModel:            s.TranslateModel,
 		OpenAIForwardModel:        s.OpenAIForwardModel,
@@ -31,25 +30,30 @@ func (h *Host) nativeSettingsFromDisk() nativecloud.Settings {
 		OpenAITranscribeModel:     s.OpenAITranscribeModel,
 		OpenAIWhisperModel:        s.OpenAIWhisperModel,
 		OpenRouterTranscribeModel: s.OpenRouterTranscribeModel,
-		OpenAIKey:                 s.OpenAIAPIKey,
-		OpenAIBase:                s.OpenAIBaseURL,
-		OpenRouterKey:             s.OpenRouterAPIKey,
-		OpenRouterBase:            s.OpenRouterBaseURL,
-		DeepgramKey:               s.DeepgramAPIKey,
-		DeepgramBase:              s.DeepgramBaseURL,
+		Credentials: cloudapi.Credentials{
+			APIProvider:    s.APIProvider,
+			OpenAIKey:      s.OpenAIAPIKey,
+			OpenAIBase:     s.OpenAIBaseURL,
+			OpenRouterKey:  s.OpenRouterAPIKey,
+			OpenRouterBase: s.OpenRouterBaseURL,
+			DeepgramKey:    s.DeepgramAPIKey,
+			DeepgramBase:   s.DeepgramBaseURL,
+			DashScopeKey:   s.DashScopeAPIKey,
+			DashScopeBase:  s.DashScopeBaseURL,
+		},
 	}
 }
 
 func useNativeCloud() bool { return !engine.ManagedEngineAvailable() }
 
-// cloudOnlyASR reports whether an ASR engine can ONLY be served by the Go
-// native-cloud path. The managed Python engine implements whisper/openai/
-// openrouter ASR but has no Deepgram path: forwarding a Deepgram request to it
-// silently degrades to local Whisper (resolve_asr → "local"). So mic ASR
-// dispatch must honour the engine even when the Python sidecar is running for
-// an unrelated local need (NLLB backtranslate, window translate).
+// cloudOnlyASR reports whether the Python sidecar lacks the requested provider.
 func cloudOnlyASR(asrEngine string) bool {
-	return cloudapi.NormalizeASREngine(asrEngine) == "deepgram"
+	switch cloudapi.NormalizeASREngine(asrEngine) {
+	case "deepgram", "dashscope":
+		return true
+	default:
+		return false
+	}
 }
 
 func (h *Host) micASRUsesNativeCloud(asrEngine string) bool {
@@ -116,7 +120,7 @@ func (h *Host) handleNativeSpeakTTS(w http.ResponseWriter, r *http.Request) {
 	s := h.readSettingsFromDisk()
 	ns := h.nativeSettingsFromDisk()
 	raw, format, err := cloudapi.SynthesizeSpeech(
-		ns.ToCredentials(),
+		ns.Credentials,
 		s.TTSEngine,
 		s.OpenAITTSModel,
 		s.TTSVoiceName,
