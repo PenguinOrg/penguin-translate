@@ -18,8 +18,7 @@ type AzurePAWord struct {
 	ErrorType string  `json:"error_type"` // None | Mispronunciation | Omission | Insertion
 }
 
-// AzurePAResult is the parsed pronunciation-assessment outcome. Prosody is 0
-// when the locale doesn't support it (only en-US does).
+// AzurePAResult is the parsed pronunciation-assessment outcome.
 type AzurePAResult struct {
 	RecognizedText string        `json:"recognized_text"`
 	Accuracy       float64       `json:"accuracy"`
@@ -30,53 +29,28 @@ type AzurePAResult struct {
 	Words          []AzurePAWord `json:"words"`
 }
 
-// AzureLocale maps an ASR/catalog language code to the BCP-47 locale Azure
-// Pronunciation Assessment expects. Codes that already carry a region pass through.
-func AzureLocale(code string) string {
-	c := strings.TrimSpace(code)
-	switch strings.ToLower(c) {
-	case "ja", "jp":
-		return "ja-JP"
-	case "zh", "zh-cn", "cmn":
-		return "zh-CN"
-	case "ko":
-		return "ko-KR"
-	case "en":
-		return "en-US"
-	}
-	if strings.Contains(c, "-") {
-		return c
-	}
-	return c
-}
-
 type azurePAResponse struct {
 	RecognitionStatus string `json:"RecognitionStatus"`
 	DisplayText       string `json:"DisplayText"`
-	NBest             []struct {
-		Display                 string `json:"Display"`
-		Lexical                 string `json:"Lexical"`
-		PronunciationAssessment struct {
-			AccuracyScore     float64 `json:"AccuracyScore"`
-			FluencyScore      float64 `json:"FluencyScore"`
-			CompletenessScore float64 `json:"CompletenessScore"`
-			ProsodyScore      float64 `json:"ProsodyScore"`
-			PronScore         float64 `json:"PronScore"`
-		} `json:"PronunciationAssessment"`
-		Words []struct {
-			Word                    string `json:"Word"`
-			PronunciationAssessment struct {
-				AccuracyScore float64 `json:"AccuracyScore"`
-				ErrorType     string  `json:"ErrorType"`
-			} `json:"PronunciationAssessment"`
+	// REST responses expose scores directly on NBest and Words.
+	NBest []struct {
+		Display           string  `json:"Display"`
+		Lexical           string  `json:"Lexical"`
+		AccuracyScore     float64 `json:"AccuracyScore"`
+		FluencyScore      float64 `json:"FluencyScore"`
+		CompletenessScore float64 `json:"CompletenessScore"`
+		ProsodyScore      float64 `json:"ProsodyScore"`
+		PronScore         float64 `json:"PronScore"`
+		Words             []struct {
+			Word          string  `json:"Word"`
+			AccuracyScore float64 `json:"AccuracyScore"`
+			ErrorType     string  `json:"ErrorType"`
 		} `json:"Words"`
 	} `json:"NBest"`
 }
 
-// AssessPronunciation scores spoken audio against referenceText via Azure Speech's
-// REST short-audio Pronunciation Assessment. audio must be ≤30s, 16 kHz mono PCM WAV.
-// A non-Success recognition (silence/no-match) returns a result with an empty
-// RecognizedText and no error, so callers can surface "no speech" rather than a 0.
+// AssessPronunciation scores up to 30 seconds of 16 kHz mono PCM WAV audio.
+// Silence and no-match responses return a zero result without an error.
 func AssessPronunciation(region, key, locale, referenceText string, audio []byte) (AzurePAResult, error) {
 	region = strings.TrimSpace(region)
 	key = strings.TrimSpace(key)
@@ -129,28 +103,32 @@ func AssessPronunciation(region, key, locale, referenceText string, audio []byte
 		return AzurePAResult{}, fmt.Errorf("Azure assessment HTTP %d: %s", resp.StatusCode, truncate(string(b), 600))
 	}
 
+	return parseAzurePA(b)
+}
+
+// parseAzurePA parses Azure's detailed REST response.
+func parseAzurePA(b []byte) (AzurePAResult, error) {
 	var raw azurePAResponse
 	if err := json.Unmarshal(b, &raw); err != nil {
 		return AzurePAResult{}, fmt.Errorf("Azure assessment: bad response: %w", err)
 	}
 	if !strings.EqualFold(raw.RecognitionStatus, "Success") || len(raw.NBest) == 0 {
-		// Silence / no match: no text recognized, not an error.
 		return AzurePAResult{}, nil
 	}
 	n := raw.NBest[0]
 	out := AzurePAResult{
 		RecognizedText: strings.TrimSpace(firstNonEmpty(n.Display, n.Lexical, raw.DisplayText)),
-		Accuracy:       n.PronunciationAssessment.AccuracyScore,
-		Fluency:        n.PronunciationAssessment.FluencyScore,
-		Completeness:   n.PronunciationAssessment.CompletenessScore,
-		Prosody:        n.PronunciationAssessment.ProsodyScore,
-		Pron:           n.PronunciationAssessment.PronScore,
+		Accuracy:       n.AccuracyScore,
+		Fluency:        n.FluencyScore,
+		Completeness:   n.CompletenessScore,
+		Prosody:        n.ProsodyScore,
+		Pron:           n.PronScore,
 	}
 	for _, w := range n.Words {
 		out.Words = append(out.Words, AzurePAWord{
 			Word:      w.Word,
-			Accuracy:  w.PronunciationAssessment.AccuracyScore,
-			ErrorType: w.PronunciationAssessment.ErrorType,
+			Accuracy:  w.AccuracyScore,
+			ErrorType: w.ErrorType,
 		})
 	}
 	return out, nil

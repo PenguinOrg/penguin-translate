@@ -24,9 +24,9 @@
 
 .pp-label { display: block; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--faint); margin-bottom: 5px; }
 
-.pp-en-row { display: flex; gap: 6px; }
-.pp-en-row input { flex: 1; min-width: 0; }
-.pp-en-row button { flex-shrink: 0; padding: 0.3rem 0.6rem; }
+.pp-source-row { display: flex; gap: 6px; }
+.pp-source-row input { flex: 1; min-width: 0; }
+.pp-source-row button { flex-shrink: 0; padding: 0.3rem 0.6rem; }
 
 .pp-target { border: 1px solid var(--border-strong); border-radius: var(--r-m); background: linear-gradient(180deg, var(--accent-soft), transparent 60%), var(--surface); padding: 12px 12px 14px; }
 .pp-target-tag { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--accent); margin-bottom: 8px; }
@@ -74,8 +74,8 @@
 .pp-score.azure.bad .pp-azure-overall { color: #f0c49a; }
 .pp-azure-meta { display: flex; flex-direction: column; min-width: 0; }
 .pp-bars { display: flex; flex-direction: column; gap: 7px; }
-.pp-bar { display: grid; grid-template-columns: 88px 1fr 38px; align-items: center; gap: 8px; }
-.pp-bar-l { font-size: 0.72rem; color: var(--muted); }
+.pp-bar { display: grid; grid-template-columns: 88px 1fr 38px; align-items: center; gap: 8px; cursor: help; }
+.pp-bar-l { font-size: 0.72rem; color: var(--muted); text-decoration: underline dotted var(--surface-3); text-underline-offset: 3px; }
 .pp-bar-track { height: 7px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
 .pp-bar-track > i { display: block; height: 100%; border-radius: 999px; background: var(--ok); transition: width 0.25s ease; }
 .pp-bar-track > i.bad { background: var(--warn); }

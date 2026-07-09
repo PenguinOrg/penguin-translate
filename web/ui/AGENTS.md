@@ -70,32 +70,15 @@ languages bar.
   window · ■ Stop · ▸ Recognized text → inline dual-pane). The app-bar `#btnOverlay` toggles
   it and reflects running state. Keeps `/api/config` · `/api/start|stop|state` · `/api/events`
   SSE; F9 pause is a Go hotkey. OCR translates into `practice.my_language` (no own picker).
-- `features/practice.{js,css}` — `createPracticeStore(ctx)`. The pronunciation-practice utility
-  (NOT a view): a docked `<aside class="pp">` inside `.work`, toggled by the app-bar `#btnPractice`
-  (mirrors the Overlay launch pattern); conversation stays live beside it (`.conv-thread` gets
-  `padding-right` via `:has(#practicePanel:not([hidden]))` so reply bubbles clear the panel). Two
-  ways in: type an English phrase, or click the **🎙 Practice this phrase** chip on a translated
-  reply (`practiceTurn(turn)` seeds target/tokens from the turn's first scoreable row and sets
-  `activeTargetId`). Flow: `/api/translate-text` (EN→target) → **hold-to-record** on its **own** mic
-  stream (pointer down/up + `setPointerCapture`; reuses the conversation mic *device*) →
-  `/api/transcribe` (target ASR) → score. **Two assessment modes** (`practice.assessment_mode`,
-  refreshed by `ensureReady`): **basic** = `/api/score` (local string-match) → score ring + attempt
-  dots + `spoken_match_ranges` highlight + matched legend; **azure** = `/api/assess` (one call does
-  ASR + Azure pronunciation assessment) → per-dimension bars (accuracy/fluency/completeness; prosody
-  is en-US-only) + per-word colouring (`azureWordsHTML`, green/red by accuracy+error type). Only
-  jp/zh/ko are scoreable; target = `activeTargetId || first scoreable langs.others`. A small **🔊
-  Hear it** button on the phrase tag calls `playTarget()` → `/api/tts`, which returns synthesized
-  audio bytes played **in-page** (the user's own output — NOT the server-side `/api/speak-tts` Speak
-  route that plays through the configured output device). Reading-aid ruby (furigana/pinyin/romaja)
-  renders in BOTH the panel and the conversation logs from `reading_aid_tokens` (the Go `readingaid`
-  pkg now fills zh/ko, not just ja). `/api/score` and `/api/assess` 400 unless `practice_enabled`,
-  and the server scores by `practice.target_language` (NOT the request body), so the store POSTs on
-  open/target-change/attempt (`ensureReady`). Pauses the conversation mic while recording via
-  `conversation.suspendMic()/resumeMic()` so the attempt never reaches the main translate flow.
-  Practice settings (recognition + pronunciation voice + assessment mode + pass mark) live only in
-  the **Practice** prefs pane (Preferences sidebar) — the panel has no settings button of its own.
-  A fresh `AudioContext` is `resume()`d before capture or the clip is silent (a 0%).
-  Empty/short clips surface a message + the ASR engine, not a silent 0.
+- `features/practice.{js,css}` — `createPracticeStore(ctx)`. Docked pronunciation practice,
+  opened from the app bar or a translated turn. It translates source text when needed, records on
+  its own mic stream while suspending conversation capture, then scores the practiced language.
+  Basic mode calls `/api/transcribe` then `/api/score`; Azure mode calls `/api/assess` for ASR plus
+  pronunciation dimensions and per-word results. Scoring requests include the practiced language;
+  Azure maps it to the catalog's `tts_lang` locale, and the UI renders available reading aids.
+  `playTarget()` calls `/api/tts` and plays the returned audio in-page. Both scoring routes require
+  `practice_enabled`; `ensureReady` enables it and refreshes threshold/mode. Practice settings live
+  in the Practice preferences pane.
 - `prefs.js` — `createPrefsStore(ctx)`: the `prefs` store + a Basic⇄Advanced toggle (persisted
   in `localStorage` `pt.prefs.advanced`). Panes (declarative `x-if` in `index.html`, so only
   the active pane is in the DOM): **Languages** (a view onto the `langs` store), **Inference

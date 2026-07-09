@@ -228,7 +228,7 @@
                       <div class="trans-row"><div class="tlang" x-text="r.flag + ' ' + r.label"></div><div class="ttext" x-html="r.textHTML"></div></div>
                     </template>
                   </div>
-                  <template x-if="!turn.pending && $store.practice.scoreableRow(turn)">
+                  <template x-if="!turn.pending && $store.practice.practiceRow(turn)">
                     <button type="button" class="turn-practice" :title="$store.i18n.t('practice.openTitle')" @click="$store.practice.practiceTurn(turn)">🎙 <span x-text="$store.i18n.t('practice.thisPhrase')"></span></button>
                   </template>
                 </div>
@@ -253,10 +253,10 @@
         <template x-if="$store.practice.targetReady">
           <div style="display:contents">
             <div>
-              <label class="pp-label" x-text="$store.i18n.t('practice.sayInEnglish')"></label>
-              <div class="pp-en-row">
-                <input type="text" id="ppEnglish" autocomplete="off" :placeholder="$store.i18n.t('practice.enPlaceholder')"
-                       x-model="$store.practice.english" @keydown.enter.prevent="$store.practice.loadPhrase()">
+              <label class="pp-label" x-text="$store.i18n.t('practice.sayInLang', { lang: $store.practice.sourceLabel })"></label>
+              <div class="pp-source-row">
+                <input type="text" id="ppSource" autocomplete="off" :placeholder="$store.i18n.t('practice.sourcePlaceholder')"
+                       x-model="$store.practice.sourceText" @keydown.enter.prevent="$store.practice.loadPhrase()">
                 <button type="button" class="primary" :disabled="$store.practice.busy" @click="$store.practice.loadPhrase()" x-text="$store.i18n.t('practice.translate')"></button>
               </div>
             </div>
@@ -307,7 +307,7 @@
                 </div>
                 <div class="pp-bars">
                   <template x-for="b in $store.practice.subBars" :key="b.key">
-                    <div class="pp-bar">
+                    <div class="pp-bar" :title="b.tip">
                       <span class="pp-bar-l" x-text="b.label"></span>
                       <span class="pp-bar-track"><i :class="$store.practice.score.accepted ? 'ok' : 'bad'" :style="'width:' + b.value + '%'"></i></span>
                       <span class="pp-bar-v" x-text="b.value + '%'"></span>

@@ -70,9 +70,7 @@ func (h *Host) handlePracticeTTS(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(raw)
 }
 
-// handleAssess runs Azure Speech Pronunciation Assessment on the spoken clip —
-// the opt-in "proper" scorer. It does ASR + phoneme-level scoring in one call,
-// so it takes the raw WAV (not a pre-transcribed string like /api/score).
+// handleAssess runs Azure pronunciation assessment on the spoken clip.
 func (h *Host) handleAssess(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -103,7 +101,9 @@ func (h *Host) handleAssess(w http.ResponseWriter, r *http.Request) {
 		thr = clampThreshold(v)
 	}
 
-	res, err := cloudapi.AssessPronunciation(s.AzureSpeechRegion, s.AzureSpeechKey, cloudapi.AzureLocale(lang), expected, wav)
+	// Azure expects the catalog's BCP-47 TTS locale.
+	locale := languages.LangOr(lang).TTSLang
+	res, err := cloudapi.AssessPronunciation(s.AzureSpeechRegion, s.AzureSpeechKey, locale, expected, wav)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return

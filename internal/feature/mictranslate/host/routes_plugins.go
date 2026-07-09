@@ -526,7 +526,8 @@ func (h *Host) handleScore(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if !h.readSettingsFromDisk().PracticeEnabled {
+	s := h.readSettingsFromDisk()
+	if !s.PracticeEnabled {
 		http.Error(w, "practice mode disabled", http.StatusBadRequest)
 		return
 	}
@@ -536,34 +537,34 @@ func (h *Host) handleScore(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(body, &raw); err != nil {
+	var in struct {
+		Expected  string                   `json:"expected"`
+		Spoken    string                   `json:"spoken"`
+		Language  string                   `json:"language"`
+		Threshold int                      `json:"threshold"`
+		Furigana  []scorepkg.FuriganaToken `json:"furigana"`
+	}
+	if err := json.Unmarshal(body, &in); err != nil {
 		http.Error(w, "invalid JSON", http.StatusBadRequest)
 		return
 	}
-	var exp, spk string
-	var thr int
-	var furi []scorepkg.FuriganaToken
-	_ = json.Unmarshal(raw["expected"], &exp)
-	_ = json.Unmarshal(raw["spoken"], &spk)
-	_ = json.Unmarshal(raw["threshold"], &thr)
-	if v, ok := raw["furigana"]; ok {
-		_ = json.Unmarshal(v, &furi)
+	if in.Threshold <= 0 {
+		in.Threshold = s.ScoreThreshold
 	}
-	if thr <= 0 {
-		thr = h.readSettingsFromDisk().ScoreThreshold
+	scoreLang := languages.CanonicalID(strings.TrimSpace(in.Language))
+	if scoreLang == "" {
+		scoreLang = languages.Get(s.TargetLanguage).ID
 	}
-	prof := languages.Get(h.readSettingsFromDisk().TargetLanguage)
 	resp := scorepkg.Evaluate(scorepkg.Request{
-		Expected:  strings.TrimSpace(exp),
-		Spoken:    strings.TrimSpace(spk),
-		Threshold: clampThreshold(thr),
-		Furigana:  furi,
-		Lang:      prof.ID,
+		Expected:  strings.TrimSpace(in.Expected),
+		Spoken:    strings.TrimSpace(in.Spoken),
+		Threshold: clampThreshold(in.Threshold),
+		Furigana:  in.Furigana,
+		Lang:      scoreLang,
 	})
 	w.Header().Set("Content-Type", "application/json")
 	if resp.Accepted {
-		h.dispatchPracticePassed(r, "", exp, spk, resp.Score)
+		h.dispatchPracticePassed(r, "", in.Expected, in.Spoken, resp.Score)
 	}
 	_ = json.NewEncoder(w).Encode(resp)
 }

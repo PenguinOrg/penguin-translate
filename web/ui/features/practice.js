@@ -12,9 +12,7 @@ function ensureStyle() {
   document.head.appendChild(l);
 }
 
-// Catalog language id -> server score profile id. Only these three have a
-// pronunciation scorer + reading aid; everything else cannot be practiced.
-const SCOREABLE = { ja: 'jp', zh: 'zh', ko: 'ko' };
+// Practice any catalog language; reading aids remain language-specific.
 const MAX_REC_MS = 10000;
 
 export function createPracticeStore(ctx) {
@@ -29,9 +27,8 @@ export function createPracticeStore(ctx) {
     for (const t of tokens) { if (!t || !t.surface) continue; out += t.reading ? '<ruby>' + esc(t.surface) + '<rt>' + esc(t.reading) + '</rt></ruby>' : esc(t.surface); }
     return out || esc(text);
   }
-  // Azure scores per word: render the recognized text colouring each word green
-  // (good) or red (mispronounced / wrong) from its accuracy + error type.
-  function azureWordsHTML(words, fallback) {
+  // Highlight assessed words by accuracy and error type.
+  function assessmentWordsHTML(words, fallback) {
     if (!Array.isArray(words) || !words.length) return esc(fallback || '');
     return words.map((w) => {
       if (!w || !w.word) return '';
@@ -90,36 +87,32 @@ export function createPracticeStore(ctx) {
     if (!r.ok) throw new Error(await httpErrorMessage(r, 'POST /api/transcribe'));
     return r.json();
   }
-  async function translateOne(english, targetId) {
-    const r = await fetch('/api/translate-text', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: english, source_language: 'en', target_languages: [targetId] }) });
+  async function translateOne(text, sourceId, targetId) {
+    const r = await fetch('/api/translate-text', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text, source_language: sourceId, target_languages: [targetId] }) });
     if (!r.ok) throw new Error(await httpErrorMessage(r, 'POST /api/translate-text'));
     const j = await r.json(); return (j.results || [])[0] || null;
   }
-  async function postScore(expected, spoken, tokens) {
-    const body = { expected, spoken, threshold: S().threshold || 0 };
+  async function postScore(expected, spoken, tokens, language) {
+    const body = { expected, spoken, language, threshold: S().threshold || 0 };
     if (Array.isArray(tokens) && tokens.length) body.furigana = tokens;
     const r = await fetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (!r.ok) throw new Error(await httpErrorMessage(r, 'POST /api/score'));
     return r.json();
   }
 
-  // Descriptor for a practiced language by catalog id (jp/zh/ko only).
   function resolveTargetById(id) {
-    if (!id || !SCOREABLE[id]) return null;
+    if (!id) return null;
     const langs = Alpine.store('langs');
     const L = langs.byId(id);
-    return { id, profile: SCOREABLE[id], label: langs.label(id), flag: langs.flag(id), asr: L.asr_code || id, furigana: L.reading_aid === 'furigana' };
+    if (!L || !L.id) return null;
+    return { id, label: langs.label(id), flag: langs.flag(id), asr: L.asr_code || id, furigana: L.reading_aid === 'furigana' };
   }
-  // The default practiced language = first scoreable output language.
-  function firstScoreable() { return (Alpine.store('langs')?.others || []).find((o) => SCOREABLE[o]) || ''; }
+  function firstPracticeable() { return (Alpine.store('langs')?.others || [])[0] || ''; }
 
-  // Arm practice mode for a target and refresh the threshold + assessment mode.
-  // The server scores by practice.target_language (not the request body), so this
-  // must run before scoring; it's cheap and idempotent, so it runs each attempt.
-  async function ensureReady(target) {
-    if (!target) return false;
+  // Enable practice and refresh server-controlled scoring options.
+  async function ensureReady() {
     try {
-      const s = await postJSON('/api/settings', { practice: { practice_enabled: true, target_language: target.profile } }, 'POST /api/settings');
+      const s = await postJSON('/api/settings', { practice: { practice_enabled: true } }, 'POST /api/settings');
       const p = s.practice || {};
       if (Number(p.score_threshold) > 0) S().threshold = Number(p.score_threshold);
       S().assessmentMode = (p.assessment_mode === 'azure') ? 'azure' : 'basic';
@@ -130,47 +123,46 @@ export function createPracticeStore(ctx) {
   const store = {
     open: false,
     threshold: 80,
-    english: '',
+    sourceText: '',
     recording: false,
     busy: false,
     ttsBusy: false,
     status: '',
-    activeTargetId: '', // set when practicing a specific conversation turn; else first scoreable
-    assessmentMode: 'basic', // 'basic' (local match) | 'azure' (pronunciation assessment)
-    // current phrase
+    activeTargetId: '', // Set for a conversation turn; empty uses the first output language.
+    assessmentMode: 'basic',
     target: '',
     tokens: [],
-    // last score
     score: { has: false, value: 0, accepted: false, sub: null },
     spokenHTML: '',
     attempts: [],
-    heard: { text: '', detected: '', engine: '' }, // what the ASR returned + which backend
+    heard: { text: '', detected: '', engine: '' },
 
     THRESHOLDS: [50, 60, 70, 80, 90, 100],
 
-    get tgt() { return resolveTargetById(this.activeTargetId || firstScoreable()); },
+    get tgt() { return resolveTargetById(this.activeTargetId || firstPracticeable()); },
     get targetReady() { return !!this.tgt; },
     get hasPhrase() { return !!this.target; },
-    get dirLabel() { const t = this.tgt; return t ? 'EN → ' + (Alpine.store('langs').abbr(t.id)) : ''; },
+    get srcId() { return Alpine.store('langs').my; },
+    get sourceLabel() { return Alpine.store('langs').label(this.srcId); },
+    get dirLabel() { const t = this.tgt; if (!t) return ''; const L = Alpine.store('langs'); return L.abbr(this.srcId) + ' → ' + L.abbr(t.id); },
     get targetLabel() { const t = this.tgt; return t ? (t.flag + ' ' + t.label) : ''; },
-    get targetCls() { const t = this.tgt; return t ? ('lang-' + t.profile) : ''; },
+    get targetCls() { const t = this.tgt; return t ? ('lang-' + t.id) : ''; },
     get targetHTML() { return this.target ? rubyHTML(this.target, this.tokens) : ''; },
     get recBtnLabel() { return this.recording ? tt('practice.release') : (this.score.has ? tt('practice.recordAgain') : tt('practice.record')); },
     get verdict() { return this.score.accepted ? tt('practice.passed') : tt('practice.keepTrying'); },
     get thresholdLabel() { return tt('practice.threshold', { n: this.threshold }); },
     get hasHeard() { return !!(this.heard.engine || this.heard.text); },
     get heardLine() { const h = this.heard; const parts = []; if (h.engine) parts.push(h.engine); if (h.detected) parts.push(h.detected); return parts.join(' · '); },
-    get isAzure() { return this.assessmentMode === 'azure'; },
+    get usesPronunciationAssessment() { return this.assessmentMode === 'azure'; },
     get canHear() { return this.hasPhrase && !this.ttsBusy && !this.recording; },
-    // Per-dimension bars for the Azure "proper" result (prosody only when present).
     get subBars() {
       const s = this.score.sub; if (!s) return [];
       const out = [
-        { key: 'accuracy', label: tt('practice.subAccuracy'), value: Math.round(Number(s.accuracy || 0)) },
-        { key: 'fluency', label: tt('practice.subFluency'), value: Math.round(Number(s.fluency || 0)) },
-        { key: 'completeness', label: tt('practice.subCompleteness'), value: Math.round(Number(s.completeness || 0)) },
+        { key: 'accuracy', label: tt('practice.subAccuracy'), tip: tt('practice.tipAccuracy'), value: Math.round(Number(s.accuracy || 0)) },
+        { key: 'fluency', label: tt('practice.subFluency'), tip: tt('practice.tipFluency'), value: Math.round(Number(s.fluency || 0)) },
+        { key: 'completeness', label: tt('practice.subCompleteness'), tip: tt('practice.tipCompleteness'), value: Math.round(Number(s.completeness || 0)) },
       ];
-      if (Number(s.prosody) > 0) out.push({ key: 'prosody', label: tt('practice.subProsody'), value: Math.round(Number(s.prosody)) });
+      if (Number(s.prosody) > 0) out.push({ key: 'prosody', label: tt('practice.subProsody'), tip: tt('practice.tipProsody'), value: Math.round(Number(s.prosody)) });
       return out;
     },
     ringStyle() {
@@ -185,18 +177,24 @@ export function createPracticeStore(ctx) {
       const t = this.tgt;
       if (!t) { this.status = tt('practice.noTarget'); return; }
       this.status = this.hasPhrase ? '' : tt('practice.statusReady');
-      await ensureReady(t);
+      await ensureReady();
     },
 
     async loadPhrase() {
-      const en = (this.english || '').trim();
+      const sourceText = (this.sourceText || '').trim();
       const t = this.tgt;
-      if (!en || !t || this.busy) return;
+      if (!sourceText || !t || this.busy) return;
       this.busy = true; this.status = tt('practice.statusTranslating');
       this._clearScore();
       try {
-        if (!(await ensureReady(t))) return;
-        const row = await translateOne(en, t.id);
+        if (!(await ensureReady())) return;
+        // Skip translation when source and target match.
+        if (this.srcId === t.id) {
+          this.target = sourceText; this.tokens = []; this.attempts = [];
+          this.status = tt('practice.statusSayIt');
+          return;
+        }
+        const row = await translateOne(sourceText, this.srcId, t.id);
         const text = (row && row.text || '').trim();
         if (!text) { this.status = tt('practice.translateEmpty'); return; }
         this.target = text;
@@ -234,7 +232,7 @@ export function createPracticeStore(ctx) {
       if (this.busy || this.recording) return;
       const t = this.tgt;
       if (!t || !this.hasPhrase) return;
-      if (!(await ensureReady(t))) return;
+      if (!(await ensureReady())) return;
       try {
         const conv = Alpine.store('conversation');
         if (conv?.listening) await conv.suspendMic();
@@ -255,7 +253,7 @@ export function createPracticeStore(ctx) {
       this.busy = true; this.status = tt('practice.statusScoring');
       try {
         const wav = buildWav(pcm);
-        if (this.isAzure) await this._assessAzure(wav, t);
+        if (this.usesPronunciationAssessment) await this._assessPronunciation(wav, t);
         else await this._scoreBasic(wav, t);
       } catch (e) {
         ctx.Toasts?.push?.({ title: tt('practice.scoreFailed'), msg: e?.message || String(e) });
@@ -274,7 +272,7 @@ export function createPracticeStore(ctx) {
         this.status = tt('practice.noSpeech', { engine: this.heard.engine || tt('practice.unknownEngine') });
         return;
       }
-      const sc = await postScore(this.target, spoken, t.furigana ? this.tokens : []);
+      const sc = await postScore(this.target, spoken, t.furigana ? this.tokens : [], t.id);
       const value = Number(sc.score || 0), accepted = !!sc.accepted;
       const base = typeof sc.spoken_highlight_base === 'string' && sc.spoken_highlight_base ? sc.spoken_highlight_base : spoken;
       this.spokenHTML = highlightedSpoken(base, sc.spoken_match_ranges) || esc(spoken || '');
@@ -282,9 +280,8 @@ export function createPracticeStore(ctx) {
       this.attempts = [...this.attempts, { value, accepted }];
       this.status = accepted ? tt('practice.passed') : tt('practice.statusRetry', { n: this.threshold });
     },
-    // Azure scorer: one call does ASR + phoneme-level pronunciation assessment,
-    // returning per-dimension sub-scores and per-word accuracy/error types.
-    async _assessAzure(wav, t) {
+    // Run provider-backed pronunciation assessment.
+    async _assessPronunciation(wav, t) {
       const fd = new FormData();
       fd.append('file', wav, 'clip.wav');
       fd.append('language', t.asr);
@@ -301,7 +298,7 @@ export function createPracticeStore(ctx) {
         return;
       }
       const value = Math.round(Number(a.score || 0)), accepted = !!a.accepted;
-      this.spokenHTML = azureWordsHTML(a.words || [], spoken);
+      this.spokenHTML = assessmentWordsHTML(a.words || [], spoken);
       this.score = { has: true, value, accepted, sub: a.sub || null };
       this.attempts = [...this.attempts, { value, accepted }];
       this.status = accepted ? tt('practice.passed') : tt('practice.statusRetry', { n: this.threshold });
@@ -321,38 +318,32 @@ export function createPracticeStore(ctx) {
     },
     retry() { this._clearScore(); this.status = tt('practice.statusSayIt'); },
 
-    // Seed the panel from a translated conversation turn ("Practice this phrase").
-    scoreableRow(turn) {
+    practiceRow(turn) {
       if (!turn || turn.kind !== 'out' || !Array.isArray(turn.rows)) return null;
-      return turn.rows.find((r) => r && SCOREABLE[r.language]) || null;
+      return turn.rows.find((r) => r && r.language) || null;
     },
     async practiceTurn(turn) {
-      const row = this.scoreableRow(turn);
+      const row = this.practiceRow(turn);
       if (!row) return;
       this.activeTargetId = row.language;
       this.open = true;
-      this.english = turn.original || '';
+      this.sourceText = turn.original || '';
       this.target = row.text || '';
       this.tokens = row.tokens || [];
       this.attempts = []; this._clearScore();
       const t = this.tgt;
       this.status = t ? tt('practice.statusSayIt') : tt('practice.noTarget');
-      if (t) await ensureReady(t);
+      if (t) await ensureReady();
     },
 
     nextPhrase() {
       this.cancelHold();
       this.activeTargetId = '';
-      this.english = ''; this.target = ''; this.tokens = []; this.attempts = [];
+      this.sourceText = ''; this.target = ''; this.tokens = []; this.attempts = [];
       this._clearScore(); this.status = tt('practice.statusReady');
-      Alpine.nextTick(() => { const el = document.getElementById('ppEnglish'); if (el) el.focus(); });
+      Alpine.nextTick(() => { const el = document.getElementById('ppSource'); if (el) el.focus(); });
     },
     _clearScore() { this.score = { has: false, value: 0, accepted: false, sub: null }; this.spokenHTML = ''; this.heard = { text: '', detected: '', engine: '' }; },
-
-    init() {
-      // Re-resolving target is reactive via getters; threshold + assessment mode
-      // are refreshed by ensureReady on every open/target-change/attempt.
-    },
   };
   return store;
 }
