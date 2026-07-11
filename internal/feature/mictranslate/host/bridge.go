@@ -36,6 +36,8 @@ func micTranslateFromDomain(st domain.Settings) settingsFile {
 		DeepgramBaseURL:      st.DeepgramBaseURL,
 		DashScopeAPIKey:      st.DashScopeAPIKey,
 		DashScopeBaseURL:     st.DashScopeBaseURL,
+		PenguinAPIKey:        st.PenguinAPIKey,
+		PenguinBaseURL:       st.PenguinBaseURL,
 		AzureSpeechKey:       st.AzureSpeechKey,
 	}
 }
@@ -49,6 +51,8 @@ func applyMicTranslateToDomain(st *domain.Settings, s settingsFile) {
 	st.DeepgramBaseURL = s.DeepgramBaseURL
 	st.DashScopeAPIKey = s.DashScopeAPIKey
 	st.DashScopeBaseURL = s.DashScopeBaseURL
+	st.PenguinAPIKey = s.PenguinAPIKey
+	st.PenguinBaseURL = s.PenguinBaseURL
 	st.AzureSpeechKey = s.AzureSpeechKey
 	st.MicTranslate = s.MicTranslateSettings
 }

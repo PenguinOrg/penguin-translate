@@ -26,7 +26,7 @@ func TestAssessPronunciationValidatesInputs(t *testing.T) {
 }
 
 // Captured from Azure's detailed short-audio REST response.
-const azurePASuccessBody = `{
+const assessmentSuccessBody = `{
   "RecognitionStatus": "Success",
   "DisplayText": "The quick brown fox.",
   "NBest": [{
@@ -46,10 +46,10 @@ const azurePASuccessBody = `{
   }]
 }`
 
-func TestParseAzurePAFlatScores(t *testing.T) {
-	got, err := parseAzurePA([]byte(azurePASuccessBody))
+func TestParsePronunciationAssessmentFlatScores(t *testing.T) {
+	got, err := parsePronunciationAssessment([]byte(assessmentSuccessBody))
 	if err != nil {
-		t.Fatalf("parseAzurePA: %v", err)
+		t.Fatalf("parsePronunciationAssessment: %v", err)
 	}
 	if got.Accuracy != 97 || got.Fluency != 100 || got.Completeness != 100 || got.Pron != 95.8 || got.Prosody != 91.1 {
 		t.Fatalf("overall scores not parsed from flat NBest fields: %+v", got)
@@ -65,8 +65,8 @@ func TestParseAzurePAFlatScores(t *testing.T) {
 	}
 }
 
-func TestParseAzurePASilence(t *testing.T) {
-	got, err := parseAzurePA([]byte(`{"RecognitionStatus":"InitialSilenceTimeout","NBest":[]}`))
+func TestParsePronunciationAssessmentSilence(t *testing.T) {
+	got, err := parsePronunciationAssessment([]byte(`{"RecognitionStatus":"InitialSilenceTimeout","NBest":[]}`))
 	if err != nil {
 		t.Fatalf("silence should not error: %v", err)
 	}

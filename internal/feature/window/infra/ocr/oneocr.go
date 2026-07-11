@@ -222,11 +222,11 @@ func (e *Engine) RecognizeResult(pixels []byte, captureW, captureH int) (*Result
 }
 
 func (e *Engine) readText(handle int64, proc *syscall.Proc) string {
-	var content int64
-	if r, _, _ := proc.Call(uintptr(handle), uintptr(unsafe.Pointer(&content))); r != 0 || content == 0 {
+	var content *byte
+	if r, _, _ := proc.Call(uintptr(handle), uintptr(unsafe.Pointer(&content))); r != 0 || content == nil {
 		return ""
 	}
-	return cString(uintptr(content))
+	return cString(content)
 }
 
 func (e *Engine) readBBox(handle int64, proc *syscall.Proc) Box {
@@ -264,25 +264,15 @@ func downscale(pixels []byte, width, height, maxDim int) ([]byte, int, int) {
 	return out, nw, nh
 }
 
-func cString(ptr uintptr) string {
-	if ptr == 0 {
+func cString(p *byte) string {
+	if p == nil {
 		return ""
 	}
-	var n int
-	for {
-		b := *(*byte)(unsafe.Pointer(ptr + uintptr(n)))
-		if b == 0 {
-			break
-		}
-		n++
-		if n > 1<<20 {
+	n := 0
+	for ; n < 1<<20; n++ {
+		if *(*byte)(unsafe.Add(unsafe.Pointer(p), n)) == 0 {
 			break
 		}
 	}
-	if n == 0 {
-		return ""
-	}
-	buf := make([]byte, n)
-	copy(buf, (*[1 << 20]byte)(unsafe.Pointer(ptr))[:n:n])
-	return string(buf)
+	return string(unsafe.Slice(p, n))
 }

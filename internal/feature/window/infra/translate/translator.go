@@ -37,6 +37,14 @@ func NewFromSettings(st domain.Settings) Translator {
 		}, w.OpenRouterModel)
 		c.Target = target
 		return c
+	case "penguin":
+		c := New(cloudapi.Credentials{
+			PenguinKey:  st.PenguinAPIKey,
+			PenguinBase: st.PenguinBaseURL,
+			APIProvider: "penguin",
+		}, w.PenguinModel)
+		c.Target = target
+		return c
 	default:
 		c := New(cloudapi.Credentials{
 			OpenAIKey:   st.OpenAIAPIKey,
@@ -62,6 +70,12 @@ func backendCacheKey(w domain.WindowSettings) string {
 			return "openrouter:openai/gpt-4o-mini"
 		}
 		return "openrouter:" + m
+	case "penguin":
+		m := strings.TrimSpace(w.PenguinModel)
+		if m == "" {
+			return "penguin:penguin/ocr-translate"
+		}
+		return "penguin:" + m
 	default:
 		m := strings.TrimSpace(w.OpenAIModel)
 		if m == "" {

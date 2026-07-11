@@ -61,6 +61,8 @@ func (s Settings) transcribeModel(asrEngine string) string {
 		return "nova-2"
 	case "dashscope":
 		return "qwen3-asr-flash"
+	case "penguin":
+		return "penguin/asr"
 	default:
 		if strings.TrimSpace(s.OpenAITranscribeModel) != "" {
 			return strings.TrimSpace(s.OpenAITranscribeModel)

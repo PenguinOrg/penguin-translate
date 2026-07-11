@@ -25,6 +25,9 @@ func Mount(mux *http.ServeMux, app *composition.App) http.Handler {
 	app.Window.MountRoutes(mux)
 
 	mux.HandleFunc("/api/settings", handleSettings(app))
+	mux.HandleFunc("/api/penguin/login", handlePenguinLogin(app))
+	mux.HandleFunc("/api/penguin/status", handlePenguinStatus(app))
+	mux.HandleFunc("/api/penguin/cancel", handlePenguinCancel())
 
 	mux.Handle("/ui/", http.StripPrefix("/ui/", http.FileServerFS(webUIFS())))
 	mux.HandleFunc("/ui", func(w http.ResponseWriter, r *http.Request) {

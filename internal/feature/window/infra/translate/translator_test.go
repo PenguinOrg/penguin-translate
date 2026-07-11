@@ -55,6 +55,41 @@ func TestNewFromSettingsBuildsProviderCreds(t *testing.T) {
 	}
 }
 
+func TestNewFromSettingsPenguinBackend(t *testing.T) {
+	st := domain.Settings{
+		PenguinAPIKey:  "pgn-key",
+		PenguinBaseURL: "https://pg.test",
+		Window: domain.WindowSettings{
+			TranslateBackend: "penguin",
+			PenguinModel:     "penguin/ocr-translate",
+		},
+	}
+	c, ok := NewFromSettings(st).(*Client)
+	if !ok {
+		t.Fatalf("expected *Client, got %T", NewFromSettings(st))
+	}
+	if c.Creds.APIProvider != "penguin" {
+		t.Errorf("APIProvider = %q, want penguin", c.Creds.APIProvider)
+	}
+	if c.Creds.PenguinKey != "pgn-key" || c.Creds.PenguinBase != "https://pg.test" {
+		t.Errorf("penguin creds = %q/%q", c.Creds.PenguinKey, c.Creds.PenguinBase)
+	}
+	if c.Model != "penguin/ocr-translate" {
+		t.Errorf("Model = %q, want penguin/ocr-translate", c.Model)
+	}
+}
+
+func TestCacheKeyPenguinBackend(t *testing.T) {
+	st := domain.Settings{Window: domain.WindowSettings{TranslateBackend: "penguin"}}
+	if got := CacheKey(st); got != "penguin:penguin/ocr-translate" {
+		t.Errorf("CacheKey = %q, want penguin:penguin/ocr-translate", got)
+	}
+	st.Window.PenguinModel = "penguin/other"
+	if got := CacheKey(st); got != "penguin:penguin/other" {
+		t.Errorf("CacheKey = %q, want penguin:penguin/other", got)
+	}
+}
+
 func TestNewFromSettingsLocalBackend(t *testing.T) {
 	for _, backend := range []string{"nllb", "local"} {
 		st := domain.Settings{Window: domain.WindowSettings{TranslateBackend: backend}}

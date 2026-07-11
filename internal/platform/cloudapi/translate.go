@@ -69,6 +69,8 @@ func NormalizeASREngine(v string) string {
 		return "deepgram"
 	case "dashscope", "ds":
 		return "dashscope"
+	case "penguin":
+		return "penguin"
 	default:
 		return "whisper"
 	}
@@ -84,6 +86,8 @@ func CloudTranscribe(creds Credentials, asrEngine, model, language string, wav [
 		return DeepgramTranscribeWAV(creds, model, language, wav, 3*time.Minute)
 	case "dashscope":
 		return DashScopeTranscribeWAV(creds, model, language, "", wav, 3*time.Minute)
+	case "penguin":
+		return PenguinTranscribeWAV(creds, model, language, "", wav, 3*time.Minute)
 	default:
 		return OpenRouterTranscribeWAV(creds, model, language, wav)
 	}

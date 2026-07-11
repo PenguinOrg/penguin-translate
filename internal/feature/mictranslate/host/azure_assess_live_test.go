@@ -35,6 +35,7 @@ func TestAzureAssessEndpointLive(t *testing.T) {
 	repo := persist.NewJSONRepository(path)
 	st, _ := repo.Load()
 	st.MicTranslate.PracticeEnabled = true
+	st.MicTranslate.AssessmentMode = "azure"
 	if err := repo.Save(st); err != nil {
 		t.Fatalf("save: %v", err)
 	}

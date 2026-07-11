@@ -2,6 +2,12 @@ import Alpine from '/ui/shared/alpine.esm.js';
 import { httpErrorMessage } from '/ui/shared/http.js';
 import { rmsToScale } from '/ui/shared/dsp.js';
 
+const PENGUIN_MODELS = {
+  asr: 'penguin/asr',
+  captionTranslate: 'penguin/caption-translate',
+  ocrTranslate: 'penguin/ocr-translate',
+};
+
 const TRANSCRIBE_MODELS = [
   { v: 'qwen/qwen3-asr-flash-2026-02-10', t: 'Qwen3 ASR Flash (OpenRouter)' },
   { v: 'qwen3-asr-flash', t: 'Qwen3 ASR Flash (DashScope)' },
@@ -18,6 +24,7 @@ const MIC_ASR_DEFAULTS = {
   dashscope: 'qwen3-asr-flash',
   openai: 'gpt-4o-mini-transcribe',
   deepgram: 'nova-2',
+  penguin: PENGUIN_MODELS.asr,
 };
 // Practice transcribes your spoken target attempt; the model id must belong to
 // the chosen provider (the engine sends `transcribe_model` verbatim).
@@ -38,6 +45,9 @@ const PRACTICE_ASR_MODELS = {
   deepgram: [
     { v: 'nova-2', t: 'Nova-2 — broad languages (Deepgram)' },
     { v: 'nova-3', t: 'Nova-3 (Deepgram)' },
+  ],
+  penguin: [
+    { v: PENGUIN_MODELS.asr, t: 'Speech recognition (Penguin Cloud)' },
   ],
 };
 // Practice "hear it" speaks the target phrase; the model id must belong to the
@@ -92,6 +102,7 @@ const CAPTION_ASR_MODELS = [
   { v: 'nova-3', t: 'Nova-3 (Deepgram)' },
   { v: 'gpt-4o-mini-transcribe', t: 'GPT-4o mini transcribe (OpenAI)' },
   { v: 'whisper-1', t: 'Whisper-1 (OpenAI)' },
+  { v: PENGUIN_MODELS.asr, t: 'Speech recognition (Penguin Cloud)' },
 ];
 const CAPTION_TRANSLATE_MODELS = [
   { v: 'qwen-flash', t: 'Qwen Flash (DashScope)' },
@@ -100,6 +111,7 @@ const CAPTION_TRANSLATE_MODELS = [
   { v: 'google/gemini-2.5-flash-lite', t: 'Gemini 2.5 Flash Lite (OpenRouter)' },
   { v: 'openai/gpt-4o-mini', t: 'GPT-4o mini (OpenRouter)' },
   { v: 'gpt-4o-mini', t: 'GPT-4o mini (OpenAI)' },
+  { v: PENGUIN_MODELS.captionTranslate, t: 'Caption translation (Penguin Cloud)' },
 ];
 // Deepgram is ASR-only, so its translate step runs on a chat provider.
 const CAPTION_DEFAULTS = {
@@ -107,11 +119,13 @@ const CAPTION_DEFAULTS = {
   openrouter: { transcribe_model: 'qwen/qwen3-asr-flash-2026-02-10', translate_provider: 'openrouter', translate_model: 'google/gemini-2.5-flash-lite' },
   openai: { transcribe_model: 'gpt-4o-mini-transcribe', translate_provider: 'openai', translate_model: 'gpt-4o-mini' },
   deepgram: { transcribe_model: 'nova-2', translate_provider: 'openai', translate_model: 'gpt-4o-mini' },
+  penguin: { transcribe_model: PENGUIN_MODELS.asr, translate_provider: 'penguin', translate_model: PENGUIN_MODELS.captionTranslate },
 };
 const TRANSLATE_MODEL_DEFAULTS = {
   openai: 'gpt-4o-mini',
   openrouter: 'google/gemini-2.5-flash-lite',
   dashscope: 'qwen-flash',
+  penguin: PENGUIN_MODELS.captionTranslate,
 };
 // Window-OCR translation runs on a chat model; OpenRouter uses prefixed ids, OpenAI bare ids.
 const WINDOW_OR_MODELS = [
@@ -123,6 +137,9 @@ const WINDOW_OR_MODELS = [
 const WINDOW_OAI_MODELS = [
   { v: 'gpt-4o-mini', t: 'GPT-4o mini (OpenAI)' },
   { v: 'gpt-4o', t: 'GPT-4o (OpenAI)' },
+];
+const WINDOW_PENGUIN_MODELS = [
+  { v: PENGUIN_MODELS.ocrTranslate, t: 'OCR translation (Penguin Cloud)' },
 ];
 const CAPTION_PRESETS = [
   { v: 'gpt-audio-mini', k: 'prefs.cap.presetGptAudioMini',
@@ -137,12 +154,15 @@ const CAPTION_PRESETS = [
 
 let activeMeter = null;
 let vrStatusTimer = null;
+let penguinLoginTimer = null;
 
 export function createPrefsStore(ctx) {
   const tt = (key, params) => Alpine.store('i18n').t(key, params);
 
   function stopMeter() { if (activeMeter) { try { activeMeter.stop(); } catch (_) {} activeMeter = null; } }
   function stopVrStatusPoll() { if (vrStatusTimer) { clearInterval(vrStatusTimer); vrStatusTimer = null; } }
+  // Keep login polling while the document is hidden.
+  function stopPenguinLoginPoll() { if (penguinLoginTimer) { clearInterval(penguinLoginTimer); penguinLoginTimer = null; } }
   document.addEventListener('visibilitychange', () => { if (document.hidden) { stopMeter(); stopVrStatusPoll(); } });
 
   const store = {
@@ -161,6 +181,7 @@ export function createPrefsStore(ctx) {
     oscDraft: { enabled: false, host: '127.0.0.1', port: 9000, include_original: false, notification: true, pace_cps: 15, pace_min_seconds: 1.5, pace_max_seconds: 7, pace_cjk_factor: 2 },
     diag: { line: '', tail: '' },
     vrStatus: { running: false, ok: false, detail: '', error: '' },
+    penguin: { configured: false, username: '', display_name: '', avatar_url: '', discord_id: '', entitlement: '', used_seconds: 0, limit_seconds: 0, busy: false, error: '' },
     TRANSCRIBE: TRANSCRIBE_MODELS,
     TRANSLATE: TRANSLATE_MODELS,
     MULTIMODAL: MULTIMODAL_MODELS,
@@ -168,6 +189,7 @@ export function createPrefsStore(ctx) {
     CAPTION_TRANSLATE: CAPTION_TRANSLATE_MODELS,
     WINDOW_OR: WINDOW_OR_MODELS,
     WINDOW_OAI: WINDOW_OAI_MODELS,
+    WINDOW_PENGUIN: WINDOW_PENGUIN_MODELS,
 
     get practice() { return this.settings.practice || {}; },
     get audio() { return this.settings.audio || {}; },
@@ -186,13 +208,13 @@ export function createPrefsStore(ctx) {
     get ttsVoiceOpts() { return (TTS_VOICES[this.ttsEngine] || []).map((v) => ({ v, t: v })); },
     get ttsHasVoice() { return (TTS_VOICES[this.ttsEngine] || []).length > 0; },
     get assessmentMode() { return this.practice.assessment_mode || 'basic'; },
-    get assessmentModeOpts() { return [{ v: 'basic', t: tt('prefs.prac.modeBasic') }, { v: 'azure', t: tt('prefs.prac.modeAzure') }]; },
+    get assessmentModeOpts() { return [{ v: 'basic', t: tt('prefs.prac.modeBasic') }, { v: 'azure', t: tt('prefs.prac.modeAzure') }, { v: 'penguin', t: tt('prefs.prac.modePenguin') }]; },
 
     get providerOpts() { return [{ v: 'openrouter', t: 'OpenRouter' }, { v: 'openai', t: 'OpenAI' }]; },
-    get micAsrProviderOpts() { return [{ v: 'dashscope', t: 'DashScope · Qwen' }, { v: 'deepgram', t: 'Deepgram · Nova' }, { v: 'openrouter', t: 'OpenRouter' }, { v: 'openai', t: 'OpenAI' }]; },
+    get micAsrProviderOpts() { return [{ v: 'penguin', t: 'Penguin Cloud' }, { v: 'dashscope', t: 'DashScope · Qwen' }, { v: 'deepgram', t: 'Deepgram · Nova' }, { v: 'openrouter', t: 'OpenRouter' }, { v: 'openai', t: 'OpenAI' }]; },
     get micAsrEngine() { return this.practice.english_asr_engine || 'openrouter'; },
-    get captionProviderOpts() { return [{ v: 'dashscope', t: 'DashScope · Qwen (context)' }, { v: 'deepgram', t: 'Deepgram · Nova' }, { v: 'openrouter', t: 'OpenRouter' }, { v: 'openai', t: 'OpenAI' }]; },
-    get translateProviderOpts() { return [{ v: 'openai', t: 'OpenAI' }, { v: 'openrouter', t: 'OpenRouter' }, { v: 'dashscope', t: 'DashScope · Qwen' }]; },
+    get captionProviderOpts() { return [{ v: 'penguin', t: 'Penguin Cloud' }, { v: 'dashscope', t: 'DashScope · Qwen (context)' }, { v: 'deepgram', t: 'Deepgram · Nova' }, { v: 'openrouter', t: 'OpenRouter' }, { v: 'openai', t: 'OpenAI' }]; },
+    get translateProviderOpts() { return [{ v: 'penguin', t: 'Penguin Cloud' }, { v: 'openai', t: 'OpenAI' }, { v: 'openrouter', t: 'OpenRouter' }, { v: 'dashscope', t: 'DashScope · Qwen' }]; },
     get translateProvider() { return this.audio.translate_provider || this.audio.api_provider || 'openai'; },
     get asrProvider() { return this.audio.api_provider || 'openrouter'; },
     get activeCaptionPreset() {
@@ -223,7 +245,7 @@ export function createPrefsStore(ctx) {
     get gpuOpts() { return this.cuda.length ? this.cuda.map((d) => ({ v: d.id, t: d.label || d.id })) : [{ v: '', t: tt('prefs.inf.noGpus') }]; },
 
     get winBackend() { return this.window.translate_backend || 'openrouter'; },
-    get winProviderOpts() { return [{ v: 'openrouter', t: 'OpenRouter' }, { v: 'openai', t: 'OpenAI' }, { v: 'nllb', t: tt('prefs.win.providerLocal') }]; },
+    get winProviderOpts() { return [{ v: 'penguin', t: 'Penguin Cloud' }, { v: 'openrouter', t: 'OpenRouter' }, { v: 'openai', t: 'OpenAI' }, { v: 'nllb', t: tt('prefs.win.providerLocal') }]; },
     get winTarget() { return this.practice.my_language || 'en'; },
     get winSourceOpts() {
       const i18n = Alpine.store('i18n');
@@ -277,6 +299,7 @@ export function createPrefsStore(ctx) {
       if (this.cat === 'diagnostics') this.refreshDiag();
       if (this.cat === 'capture') Alpine.nextTick(() => this.startMeter());
       if (this.cat === 'overlays') this.startVrStatusPoll();
+      if (this.cat === 'inference') this.refreshPenguin();
     },
     setAdvanced(v) {
       this.advanced = !!v;
@@ -338,7 +361,7 @@ export function createPrefsStore(ctx) {
       if (p) this.saveAudio({ ...p.patch });
     },
     removeKey(which) {
-      const flag = { openai: 'remove_openai_key', openrouter: 'remove_openrouter_key', dashscope: 'remove_dashscope_key', deepgram: 'remove_deepgram_key', azure: 'remove_azure_key', gemini: 'remove_gemini_key' }[which];
+      const flag = { openai: 'remove_openai_key', openrouter: 'remove_openrouter_key', dashscope: 'remove_dashscope_key', deepgram: 'remove_deepgram_key', penguin: 'remove_penguin_key', azure: 'remove_azure_key', gemini: 'remove_gemini_key' }[which];
       if (flag) this.save({ [flag]: true });
     },
     // Keys are write-only: GET /api/settings only reports *_key_configured, so the
@@ -348,6 +371,74 @@ export function createPrefsStore(ctx) {
       if (!v) return;
       await this.save({ [field]: v });
       if (!this.statusErr) input.value = '';
+    },
+
+    penguinHours(sec) { return ((Number(sec) || 0) / 3600).toFixed(1); },
+    async refreshPenguin() {
+      try {
+        const r = await fetch('/api/penguin/status');
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j.error || ('GET /api/penguin/status HTTP ' + r.status));
+        this.penguin = { ...this.penguin, configured: !!j.configured, username: j.username || '', display_name: j.display_name || '', avatar_url: j.avatar_url || '', discord_id: j.discord_id || '', entitlement: j.entitlement || '', used_seconds: Number(j.used_seconds) || 0, limit_seconds: Number(j.limit_seconds) || 0, error: '' };
+      } catch (e) {
+        this.penguin = { ...this.penguin, error: String(e?.message || e) };
+      }
+    },
+    async penguinLogin() {
+      this.penguin.busy = true; this.penguin.error = '';
+      try {
+        const r = await fetch('/api/penguin/login', { method: 'POST' });
+        if (!r.ok) throw new Error(await httpErrorMessage(r, 'POST /api/penguin/login'));
+        stopPenguinLoginPoll();
+        // Match the backend's five-minute login timeout.
+        const deadline = Date.now() + 5 * 60 * 1000;
+        penguinLoginTimer = setInterval(async () => {
+          await this.refreshPenguin();
+          if (this.penguin.configured) {
+            stopPenguinLoginPoll();
+            this.penguin.busy = false;
+            // Refresh the provisioned-key flag.
+            try { const rs = await fetch('/api/settings'); if (rs.ok) this.settings = await rs.json(); } catch (_) {}
+          } else if (Date.now() > deadline) {
+            stopPenguinLoginPoll();
+            this.penguin.busy = false;
+            this.penguin.error = tt('prefs.pgn.loginTimeout');
+            try { await fetch('/api/penguin/cancel', { method: 'POST' }); } catch (_) {}
+          }
+        }, 2000);
+      } catch (e) {
+        this.penguin.busy = false;
+        this.penguin.error = String(e?.message || e);
+        ctx.Toasts.push({ title: tt('prefs.pgn.loginFailed'), msg: String(e?.message || e) });
+      }
+    },
+    async penguinLogout() {
+      stopPenguinLoginPoll();
+      this.penguin.busy = false;
+      try { await fetch('/api/penguin/cancel', { method: 'POST' }); } catch (_) {}
+      await this.save({ remove_penguin_key: true });
+      await this.refreshPenguin();
+    },
+
+    acctName() { return this.penguin.display_name || this.penguin.username; },
+    acctInitial() { return this.penguin.configured ? (this.acctName() || 'P').charAt(0).toUpperCase() : 'P'; },
+    acctLabel() {
+      if (this.penguin.configured) return this.acctName() || tt('appbar.member');
+      return this.penguin.busy ? tt('appbar.signingIn') : tt('appbar.signIn');
+    },
+    acctPlan() {
+      if (!this.penguin.configured) return tt('appbar.planLocal');
+      const e = this.penguin.entitlement;
+      return e === 'premium' ? tt('appbar.premium') : e === 'tester' ? tt('appbar.tester') : (e || tt('appbar.member'));
+    },
+    acctTitle() {
+      return this.penguin.configured
+        ? tt('appbar.acctSignedIn', { used: this.penguinHours(this.penguin.used_seconds), limit: this.penguinHours(this.penguin.limit_seconds) })
+        : tt('appbar.account');
+    },
+    accountClick() {
+      if (this.penguin.configured || this.penguin.busy) { this.show('inference'); return; }
+      this.penguinLogin();
     },
 
     saveOsc() {

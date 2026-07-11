@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"translation-overlay/internal/composition"
+	"translation-overlay/internal/platform/buildconfig"
 )
 
 func newTestMux(t *testing.T) http.Handler {
@@ -132,6 +133,45 @@ func TestUnifiedSettingsDeepgram(t *testing.T) {
 	}
 }
 
+func TestUnifiedSettingsPenguin(t *testing.T) {
+	original := buildconfig.PenguinBaseURL
+	buildconfig.PenguinBaseURL = "https://penguin.example"
+	t.Cleanup(func() { buildconfig.PenguinBaseURL = original })
+
+	mux := newTestMux(t)
+
+	st := getSettings(t, mux)
+	if st["penguin_key_configured"] != false {
+		t.Fatalf("fresh install penguin_key_configured = %v, want false", st["penguin_key_configured"])
+	}
+	if st["penguin_base_url"] != "https://penguin.example" {
+		t.Fatalf("penguin_base_url = %v, want seeded default", st["penguin_base_url"])
+	}
+
+	st = postSettings(t, mux, `{"penguin_api_key":"pgn_test","penguin_base_url":"https://pg.example"}`)
+	if st["penguin_key_configured"] != true {
+		t.Errorf("penguin_key_configured = %v, want true", st["penguin_key_configured"])
+	}
+	if st["penguin_base_url"] != "https://pg.example" {
+		t.Errorf("penguin_base_url = %v, want https://pg.example", st["penguin_base_url"])
+	}
+
+	st = getSettings(t, mux)
+	if st["penguin_key_configured"] != true || st["penguin_base_url"] != "https://pg.example" {
+		t.Errorf("penguin fields did not round-trip: configured=%v base=%v", st["penguin_key_configured"], st["penguin_base_url"])
+	}
+
+	st = postSettings(t, mux, `{"remove_penguin_key":true}`)
+	if st["penguin_key_configured"] != false {
+		t.Errorf("after removal, penguin_key_configured = %v, want false", st["penguin_key_configured"])
+	}
+
+	st = postSettings(t, mux, `{"penguin_base_url":""}`)
+	if st["penguin_base_url"] != "https://penguin.example" {
+		t.Errorf("cleared base url should re-seed the default, got %v", st["penguin_base_url"])
+	}
+}
+
 func TestUnifiedSettingsPartialSectionUpdate(t *testing.T) {
 	mux := newTestMux(t)
 
@@ -156,8 +196,8 @@ func TestUnifiedSettingsPartialSectionUpdate(t *testing.T) {
 
 func TestSettingsResponseOmitsRawKeys(t *testing.T) {
 	mux := newTestMux(t)
-	secrets := []string{"sk-raw-openai", "sk-or-raw-openrouter", "raw-dashscope-key", "raw-deepgram-key", "raw-azure-key"}
-	postSettings(t, mux, `{"openai_api_key":"sk-raw-openai","openrouter_api_key":"sk-or-raw-openrouter","dashscope_api_key":"raw-dashscope-key","deepgram_api_key":"raw-deepgram-key","azure_speech_key":"raw-azure-key"}`)
+	secrets := []string{"sk-raw-openai", "sk-or-raw-openrouter", "raw-dashscope-key", "raw-deepgram-key", "pgn-raw-penguin-key", "raw-azure-key"}
+	postSettings(t, mux, `{"openai_api_key":"sk-raw-openai","openrouter_api_key":"sk-or-raw-openrouter","dashscope_api_key":"raw-dashscope-key","deepgram_api_key":"raw-deepgram-key","penguin_api_key":"pgn-raw-penguin-key","azure_speech_key":"raw-azure-key"}`)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/settings", nil)
 	rec := httptest.NewRecorder()
@@ -173,13 +213,13 @@ func TestSettingsResponseOmitsRawKeys(t *testing.T) {
 	}
 
 	st := getSettings(t, mux)
-	for _, flag := range []string{"openai_key_configured", "openrouter_key_configured", "dashscope_key_configured", "deepgram_key_configured", "azure_key_configured"} {
+	for _, flag := range []string{"openai_key_configured", "openrouter_key_configured", "dashscope_key_configured", "deepgram_key_configured", "penguin_key_configured", "azure_key_configured"} {
 		if st[flag] != true {
 			t.Errorf("%s = %v, want true", flag, st[flag])
 		}
 	}
 	for _, m := range []map[string]any{st, section(t, st, "practice"), section(t, st, "audio")} {
-		for _, k := range []string{"openai_api_key", "openrouter_api_key", "dashscope_api_key", "deepgram_api_key", "azure_speech_key"} {
+		for _, k := range []string{"openai_api_key", "openrouter_api_key", "dashscope_api_key", "deepgram_api_key", "penguin_api_key", "azure_speech_key"} {
 			if _, ok := m[k]; ok {
 				t.Errorf("settings response still carries raw key field %q", k)
 			}

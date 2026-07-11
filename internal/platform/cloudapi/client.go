@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"translation-overlay/internal/platform/buildconfig"
 )
 
 type Credentials struct {
@@ -21,11 +23,29 @@ type Credentials struct {
 	DashScopeBase  string
 	DeepgramKey    string
 	DeepgramBase   string
+	PenguinKey     string
+	PenguinBase    string
 	APIProvider    string
 }
 
 const dashScopeDefaultBase = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
 const deepgramDefaultBase = "https://api.deepgram.com"
+
+func NormalizePenguinBase(base string) string {
+	base = strings.TrimSpace(base)
+	if base == "" {
+		base = buildconfig.PenguinBase()
+	}
+	return strings.TrimRight(base, "/")
+}
+
+func ResolvePenguinBase(base string) (string, error) {
+	base = NormalizePenguinBase(base)
+	if base == "" {
+		return "", fmt.Errorf("Penguin Cloud endpoint is not configured in this build")
+	}
+	return base, nil
+}
 
 func (c Credentials) resolve() (key, base, provider string, err error) {
 	p := strings.ToLower(strings.TrimSpace(c.APIProvider))
@@ -53,6 +73,16 @@ func (c Credentials) resolve() (key, base, provider string, err error) {
 			return "", "", "", fmt.Errorf("DashScope API key required")
 		}
 		return key, strings.TrimRight(base, "/"), "dashscope", nil
+	case "penguin":
+		key = strings.TrimSpace(c.PenguinKey)
+		if key == "" {
+			return "", "", "", fmt.Errorf("Penguin API key required — sign in to Penguin Cloud")
+		}
+		base, err = ResolvePenguinBase(c.PenguinBase)
+		if err != nil {
+			return "", "", "", err
+		}
+		return key, base + "/v1", "penguin", nil
 	default:
 		key = strings.TrimSpace(c.OpenRouterKey)
 		base = strings.TrimSpace(c.OpenRouterBase)

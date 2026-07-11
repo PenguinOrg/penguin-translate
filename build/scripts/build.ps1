@@ -6,7 +6,8 @@ param(
     [switch]$Test,
     [switch]$Clean,
     [string]$OutDir,
-    [string]$Version
+    [string]$Version,
+    [string]$PenguinBaseURL
 )
 
 Set-StrictMode -Version Latest
@@ -28,6 +29,19 @@ if (-not $Version) {
     $Version = $wailsMeta.info.productVersion
 }
 if (-not $Version) { $Version = "0.1.0" }
+if (-not $PenguinBaseURL) { $PenguinBaseURL = $env:PENGUIN_BASE_URL }
+if ($PenguinBaseURL) {
+    $PenguinBaseURL = $PenguinBaseURL.Trim().TrimEnd("/")
+    try {
+        $penguinUri = [Uri]$PenguinBaseURL
+    } catch {
+        throw "PenguinBaseURL must be a valid absolute HTTPS URL"
+    }
+    if (-not $penguinUri.IsAbsoluteUri -or $penguinUri.Scheme -ne "https" -or
+        $penguinUri.UserInfo -or $penguinUri.Query -or $penguinUri.Fragment) {
+        throw "PenguinBaseURL must be an absolute HTTPS URL without credentials, query, or fragment"
+    }
+}
 
 $script:Timings = [System.Collections.Generic.List[object]]::new()
 
@@ -167,10 +181,16 @@ function Invoke-GoRelease {
     $wailsTags = "desktop,production,wv2runtime.download"
     if ($OverlayEmbedded) { $wailsTags += ",overlay_embedded" }
     $env:CGO_ENABLED = $CgoEnabled
-    $ld = @(
+    $ldParts = @(
         "-s", "-w", "-H", "windowsgui",
         "-X", "translation-overlay/internal/platform/version.Version=$Version"
-    ) -join " "
+    )
+    if ($PenguinBaseURL) {
+        $ldParts += @(
+            "-X", "translation-overlay/internal/platform/buildconfig.PenguinBaseURL=$PenguinBaseURL"
+        )
+    }
+    $ld = $ldParts -join " "
     Write-Host "go build (release, CGO_ENABLED=$CgoEnabled, tags=$wailsTags, v$Version)..."
     go build -trimpath -buildvcs=false -tags $wailsTags -ldflags $ld -o $OutExe ./cmd/app/
     if ($LASTEXITCODE -ne 0) { throw "go build failed (exit $LASTEXITCODE)" }

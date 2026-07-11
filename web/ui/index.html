@@ -19,8 +19,10 @@
     .ghost { display: flex; align-items: center; gap: 7px; background: transparent; border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font-size: 12.5px; color: var(--muted); }
     .ghost:hover { color: var(--text); border-color: var(--border-strong); }
     .ghost.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-    .account { display: flex; align-items: center; gap: 8px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; padding: 3px 11px 3px 4px; font-size: 12px; color: var(--text); }
-    .account .av { width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #5b8cff, #9a6bff); display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; font-weight: 700; }
+    .account { display: flex; align-items: center; gap: 8px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; padding: 3px 11px 3px 4px; font-size: 12px; color: var(--text); font-family: inherit; cursor: pointer; }
+    .account:hover { border-color: var(--border-strong); }
+    .account .av { width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #5b8cff, #9a6bff); display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; font-weight: 700; overflow: hidden; }
+    .account .av img { width: 100%; height: 100%; object-fit: cover; }
     .account .plan { font-size: 10px; color: var(--muted); border: 1px solid var(--border-strong); border-radius: 5px; padding: 1px 6px; line-height: 1.5; }
     .gear { width: 32px; height: 32px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: var(--muted); font-size: 15px; line-height: 1; }
     .gear:hover { background: var(--surface-2); color: var(--text); border-color: var(--border-strong); }
@@ -127,7 +129,7 @@
     <button type="button" class="ghost" id="btnOverlay" :title="$store.i18n.t('appbar.overlayTitle')"
             :class="{ active: $store.overlay.open || $store.overlay.running }" :data-running="$store.overlay.running"
             @click="$store.overlay.toggle()">🖥 <span x-text="$store.i18n.t('appbar.overlay')"></span></button>
-    <div class="account" :title="$store.i18n.t('appbar.account')"><span class="av">M</span> <span id="acctName" x-text="$store.i18n.t('appbar.guest')"></span> <span class="plan" x-text="$store.i18n.t('appbar.planLocal')"></span></div>
+    <button type="button" class="account" :title="$store.prefs.acctTitle()" @click="$store.prefs.accountClick()" x-init="$store.prefs.refreshPenguin()"><span class="av"><template x-if="$store.prefs.penguin.configured && $store.prefs.penguin.avatar_url"><img :src="$store.prefs.penguin.avatar_url" alt="" @error="$store.prefs.penguin.avatar_url = ''"></template><template x-if="!($store.prefs.penguin.configured && $store.prefs.penguin.avatar_url)"><span x-text="$store.prefs.acctInitial()"></span></template></span> <span id="acctName" x-text="$store.prefs.acctLabel()"></span> <span class="plan" x-text="$store.prefs.acctPlan()"></span></button>
     <button type="button" class="gear" id="btnPrefs" :title="$store.i18n.t('appbar.prefs')" @click="$store.prefs.show()">⚙</button>
     <div class="lmenu" id="langMenu" x-ref="menu" :hidden="!menuOpen" @click.outside="closeMenu()">
       <div class="ttl" x-text="menuMode === 'my' ? $store.i18n.t('langmenu.my') : $store.i18n.t('langmenu.others')"></div>
@@ -444,6 +446,29 @@
             <div>
               <p class="hint" x-text="$store.i18n.t('prefs.inf.intro')"></p>
               <fieldset>
+                <legend x-text="$store.i18n.t('prefs.pgn.legend')"></legend>
+                <p class="hint" x-text="$store.i18n.t('prefs.pgn.hint')"></p>
+                <template x-if="!s.penguin.configured">
+                  <div class="field">
+                    <button @click="s.penguinLogin()" :disabled="s.penguin.busy" x-text="s.penguin.busy ? $store.i18n.t('prefs.pgn.waiting') : $store.i18n.t('prefs.pgn.signIn')"></button>
+                  </div>
+                </template>
+                <template x-if="s.penguin.configured">
+                  <div class="field">
+                    <p class="hint" style="display:flex;align-items:center;gap:8px">
+                      <template x-if="s.penguin.avatar_url"><img :src="s.penguin.avatar_url" alt="" @error="s.penguin.avatar_url = ''" style="width:28px;height:28px;border-radius:50%;object-fit:cover"></template>
+                      <span x-text="$store.i18n.t('prefs.pgn.signedInAs', { user: s.acctName() || '—', entitlement: s.acctPlan() })"></span>
+                    </p>
+                    <p class="hint" x-text="$store.i18n.t('prefs.pgn.usage', { used: s.penguinHours(s.penguin.used_seconds), limit: s.penguinHours(s.penguin.limit_seconds) })"></p>
+                    <p class="hint" x-show="settings.openrouter_key_configured" x-text="$store.i18n.t('prefs.pgn.keyFilled')"></p>
+                    <button @click="s.penguinLogout()" x-text="$store.i18n.t('prefs.pgn.signOut')"></button>
+                  </div>
+                </template>
+                <template x-if="s.penguin.error">
+                  <p class="hint" style="color:var(--danger, #d66)" x-text="s.penguin.error"></p>
+                </template>
+              </fieldset>
+              <fieldset>
                 <legend x-text="$store.i18n.t('prefs.inf.sourceLegend')"></legend>
                 <label class="line" style="opacity:.55"><input type="radio" disabled> <span x-text="' ' + $store.i18n.t('prefs.inf.managed')"></span></label>
                 <p class="hint" x-text="$store.i18n.t('prefs.inf.byok')"></p>
@@ -601,6 +626,9 @@
                     <div class="key-row"><input type="text" autocomplete="off" spellcheck="false" :placeholder="settings.dashscope_key_configured ? $store.i18n.t('prefs.keySet') : 'DashScope API key'" @change="s.saveKey('dashscope_api_key', $event.target)"><button class="key-remove" @click="s.removeKey('dashscope')" x-text="$store.i18n.t('common.remove')"></button></div>
                   </div>
                 </template>
+                <template x-if="s.micAsrEngine === 'penguin'">
+                  <p class="hint" x-text="$store.i18n.t('prefs.pgn.useSection')"></p>
+                </template>
               </fieldset>
               <fieldset>
                 <legend x-text="$store.i18n.t('prefs.prac.ttsLegend')"></legend>
@@ -728,6 +756,9 @@
                     </div>
                   </div>
                 </template>
+                <template x-if="(audio.api_provider || 'openrouter') === 'penguin'">
+                  <p class="hint" x-text="$store.i18n.t('prefs.pgn.useSection')"></p>
+                </template>
                 <template x-if="(audio.pipeline_mode || 'split') === 'split' && s.translateProvider !== s.asrProvider">
                   <div class="field">
                     <label x-text="$store.i18n.t('prefs.cap.translateKey')"></label>
@@ -749,6 +780,9 @@
                         <input type="text" autocomplete="off" spellcheck="false" :placeholder="settings.dashscope_key_configured ? $store.i18n.t('prefs.keySet') : 'DashScope API key'" @change="s.saveKey('dashscope_api_key', $event.target)">
                         <button class="key-remove" @click="s.removeKey('dashscope')" x-text="$store.i18n.t('common.remove')"></button>
                       </div>
+                    </template>
+                    <template x-if="s.translateProvider === 'penguin'">
+                      <p class="hint" x-text="$store.i18n.t('prefs.pgn.useSection')"></p>
                     </template>
                   </div>
                 </template>
@@ -874,6 +908,15 @@
                     <select @change="s.saveWindow({ openai_model: $event.target.value })">
                       <template x-for="o in s.opts(s.WINDOW_OAI, win.openai_model)" :key="o.v"><option :value="o.v" :selected="o.v === (win.openai_model || s.WINDOW_OAI[0].v)" x-text="o.t"></option></template>
                     </select>
+                  </div>
+                </template>
+                <template x-if="s.winBackend === 'penguin'">
+                  <div class="field">
+                    <label x-text="$store.i18n.t('prefs.win.model')"></label>
+                    <select @change="s.saveWindow({ penguin_model: $event.target.value })">
+                      <template x-for="o in s.opts(s.WINDOW_PENGUIN, win.penguin_model)" :key="o.v"><option :value="o.v" :selected="o.v === (win.penguin_model || s.WINDOW_PENGUIN[0].v)" x-text="o.t"></option></template>
+                    </select>
+                    <p class="hint" x-text="$store.i18n.t('prefs.pgn.useSection')"></p>
                   </div>
                 </template>
                 <template x-if="s.winBackend === 'nllb'">

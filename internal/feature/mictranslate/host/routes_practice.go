@@ -70,7 +70,6 @@ func (h *Host) handlePracticeTTS(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(raw)
 }
 
-// handleAssess runs Azure pronunciation assessment on the spoken clip.
 func (h *Host) handleAssess(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -101,9 +100,14 @@ func (h *Host) handleAssess(w http.ResponseWriter, r *http.Request) {
 		thr = clampThreshold(v)
 	}
 
-	// Azure expects the catalog's BCP-47 TTS locale.
+	// Assessment providers use the catalog's BCP-47 TTS locale.
 	locale := languages.LangOr(lang).TTSLang
-	res, err := cloudapi.AssessPronunciation(s.AzureSpeechRegion, s.AzureSpeechKey, locale, expected, wav)
+	var res cloudapi.PronunciationAssessmentResult
+	if s.AssessmentMode == "penguin" {
+		res, err = cloudapi.PenguinAssessPronunciation(s.PenguinBaseURL, s.PenguinAPIKey, locale, expected, wav)
+	} else {
+		res, err = cloudapi.AssessPronunciation(s.AzureSpeechRegion, s.AzureSpeechKey, locale, expected, wav)
+	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return

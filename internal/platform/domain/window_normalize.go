@@ -12,11 +12,16 @@ func NormalizeWindowSettings(w *WindowSettings) {
 	if strings.TrimSpace(w.OpenRouterModel) == "" {
 		w.OpenRouterModel = "openai/gpt-4o-mini"
 	}
+	if strings.TrimSpace(w.PenguinModel) == "" {
+		w.PenguinModel = "penguin/ocr-translate"
+	}
 	switch strings.ToLower(strings.TrimSpace(w.TranslateBackend)) {
 	case "nllb", "local":
 		w.TranslateBackend = "nllb"
 	case "openrouter", "or":
 		w.TranslateBackend = "openrouter"
+	case "penguin":
+		w.TranslateBackend = "penguin"
 	default:
 		w.TranslateBackend = "openai"
 	}

@@ -51,7 +51,6 @@ func (h *Host) handleNativeTranscribeSegment(w http.ResponseWriter, r *http.Requ
 	receiveUS := usSince(t0)
 
 	s := h.readSettingsFromDisk()
-	s = normalizeSettings(s)
 
 	provider := strings.ToLower(strings.TrimSpace(s.APIProvider))
 	if provider == "" {
@@ -84,34 +83,6 @@ func (h *Host) handleNativeTranscribeSegment(w http.ResponseWriter, r *http.Requ
 	dm := strings.TrimSpace(s.DiarizeModel)
 	trm := strings.TrimSpace(s.TranslateModel)
 	mm := strings.TrimSpace(s.MultimodalModel)
-	if tm == "" {
-		switch provider {
-		case "openrouter":
-			tm = "qwen/qwen3-asr-flash-2026-02-10"
-		case "dashscope":
-			tm = "qwen3-asr-flash"
-		case "deepgram":
-			tm = "nova-2"
-		default:
-			tm = "gpt-4o-mini-transcribe"
-		}
-	}
-	if dm == "" {
-		dm = "gpt-4o-transcribe-diarize"
-	}
-	if trm == "" {
-		switch translateProvider {
-		case "openrouter":
-			trm = "google/gemini-2.5-flash-lite"
-		case "dashscope":
-			trm = "qwen-flash"
-		default:
-			trm = "gpt-4o-mini"
-		}
-	}
-	if mm == "" {
-		mm = "xiaomi/mimo-v2-flash"
-	}
 
 	var hintLangs []string
 	if lang != "" {
@@ -149,6 +120,8 @@ func (h *Host) handleNativeTranscribeSegment(w http.ResponseWriter, r *http.Requ
 			DashScopeBase:  s.DashScopeBaseURL,
 			DeepgramKey:    s.DeepgramAPIKey,
 			DeepgramBase:   s.DeepgramBaseURL,
+			PenguinKey:     s.PenguinAPIKey,
+			PenguinBase:    s.PenguinBaseURL,
 			APIProvider:    provider,
 		},
 	}

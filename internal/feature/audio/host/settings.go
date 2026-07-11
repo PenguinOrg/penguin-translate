@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"translation-overlay/internal/platform/buildconfig"
 	"translation-overlay/internal/platform/domain"
 )
 
@@ -19,6 +20,8 @@ type settingsFile struct {
 	DashScopeBaseURL  string `json:"dashscope_base_url"`
 	DeepgramAPIKey    string `json:"deepgram_api_key"`
 	DeepgramBaseURL   string `json:"deepgram_base_url"`
+	PenguinAPIKey     string `json:"penguin_api_key"`
+	PenguinBaseURL    string `json:"penguin_base_url"`
 }
 
 func defaultSettingsFile() settingsFile {
@@ -91,16 +94,38 @@ func normalizeOverlayAlign(s string) string {
 	}
 }
 
+func defaultTranscribeModel(provider string) string {
+	switch provider {
+	case "openrouter":
+		return "qwen/qwen3-asr-flash-2026-02-10"
+	case "dashscope":
+		return "qwen3-asr-flash"
+	case "deepgram":
+		return "nova-2"
+	case "penguin":
+		return "penguin/asr"
+	default:
+		return "gpt-4o-mini-transcribe"
+	}
+}
+
+func defaultTranslateModel(provider string) string {
+	switch provider {
+	case "openrouter":
+		return "google/gemini-2.5-flash-lite"
+	case "dashscope":
+		return "qwen-flash"
+	case "penguin":
+		return "penguin/caption-translate"
+	default:
+		return "gpt-4o-mini"
+	}
+}
+
 func normalizeSettings(s settingsFile) settingsFile {
 	s.OpenAIBaseURL = strings.TrimSpace(s.OpenAIBaseURL)
-	if strings.TrimSpace(s.TranscribeModel) == "" {
-		s.TranscribeModel = "gpt-4o-mini-transcribe"
-	}
 	if strings.TrimSpace(s.DiarizeModel) == "" {
 		s.DiarizeModel = "gpt-4o-transcribe-diarize"
-	}
-	if strings.TrimSpace(s.TranslateModel) == "" {
-		s.TranslateModel = "gpt-4o-mini"
 	}
 	lang := strings.ToLower(strings.TrimSpace(s.PrimaryLanguage))
 	if len(lang) < 2 {
@@ -120,12 +145,12 @@ func normalizeSettings(s settingsFile) settingsFile {
 		s.APIProvider = "dashscope"
 	case "deepgram":
 		s.APIProvider = "deepgram"
+	case "penguin":
+		s.APIProvider = "penguin"
 	default:
 		s.APIProvider = "openai"
 	}
-	// The translate step runs on its own chat provider. Deepgram is ASR-only, so
-	// its translate provider must be one of the chat providers; the others
-	// default to themselves.
+	// Deepgram is ASR-only; other providers default translation to themselves.
 	switch strings.ToLower(strings.TrimSpace(s.TranslateProvider)) {
 	case "openrouter":
 		s.TranslateProvider = "openrouter"
@@ -133,6 +158,8 @@ func normalizeSettings(s settingsFile) settingsFile {
 		s.TranslateProvider = "dashscope"
 	case "openai":
 		s.TranslateProvider = "openai"
+	case "penguin":
+		s.TranslateProvider = "penguin"
 	default:
 		if s.APIProvider == "deepgram" {
 			s.TranslateProvider = "openai"
@@ -140,8 +167,17 @@ func normalizeSettings(s settingsFile) settingsFile {
 			s.TranslateProvider = s.APIProvider
 		}
 	}
+	if strings.TrimSpace(s.TranscribeModel) == "" {
+		s.TranscribeModel = defaultTranscribeModel(s.APIProvider)
+	}
+	if strings.TrimSpace(s.TranslateModel) == "" {
+		s.TranslateModel = defaultTranslateModel(s.TranslateProvider)
+	}
 	if strings.TrimSpace(s.DashScopeBaseURL) == "" && (s.APIProvider == "dashscope" || s.TranslateProvider == "dashscope") {
 		s.DashScopeBaseURL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+	}
+	if strings.TrimSpace(s.PenguinBaseURL) == "" && (s.APIProvider == "penguin" || s.TranslateProvider == "penguin") {
+		s.PenguinBaseURL = buildconfig.PenguinBase()
 	}
 	if strings.TrimSpace(s.DeepgramBaseURL) == "" && s.APIProvider == "deepgram" {
 		s.DeepgramBaseURL = "https://api.deepgram.com"
@@ -383,11 +419,11 @@ func SyncOverlayLayout(st domain.Settings) {
 
 func applyAudioPatch(next *settingsFile, in settingsPostJSON, body []byte) {
 	ap := strings.ToLower(strings.TrimSpace(in.APIProvider))
-	if bodyHasKey(body, "api_provider") && (ap == "openrouter" || ap == "openai" || ap == "dashscope" || ap == "deepgram") {
+	if bodyHasKey(body, "api_provider") && (ap == "openrouter" || ap == "openai" || ap == "dashscope" || ap == "deepgram" || ap == "penguin") {
 		next.APIProvider = ap
 	}
 	tp := strings.ToLower(strings.TrimSpace(in.TranslateProvider))
-	if bodyHasKey(body, "translate_provider") && (tp == "openrouter" || tp == "openai" || tp == "dashscope") {
+	if bodyHasKey(body, "translate_provider") && (tp == "openrouter" || tp == "openai" || tp == "dashscope" || tp == "penguin") {
 		next.TranslateProvider = tp
 	}
 	pm := strings.ToLower(strings.TrimSpace(in.PipelineMode))

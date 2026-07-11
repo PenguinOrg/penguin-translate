@@ -7,6 +7,8 @@
   "dashscope_base_url": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
   "deepgram_api_key": "",
   "deepgram_base_url": "https://api.deepgram.com",
+  "penguin_api_key": "",
+  "penguin_base_url": "",
   "azure_speech_key": "",
   "gemini_api_key": "",
   "practice": {
@@ -54,6 +56,7 @@
   "window": {
     "openai_model": "gpt-4o-mini",
     "openrouter_model": "openai/gpt-4o-mini",
+    "penguin_model": "penguin/ocr-translate",
     "translate_backend": "openrouter",
     "nllb_base_url": "http://127.0.0.1:8745",
     "poll_interval_ms": 1500,

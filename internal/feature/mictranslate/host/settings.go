@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"translation-overlay/internal/feature/mictranslate/infra/plugin"
+	"translation-overlay/internal/platform/buildconfig"
 	"translation-overlay/internal/platform/domain"
 	"translation-overlay/internal/platform/lang/languages"
 )
@@ -23,6 +24,8 @@ type settingsFile struct {
 	DeepgramBaseURL   string `json:"deepgram_base_url"`
 	DashScopeAPIKey   string `json:"dashscope_api_key"`
 	DashScopeBaseURL  string `json:"dashscope_base_url"`
+	PenguinAPIKey     string `json:"penguin_api_key"`
+	PenguinBaseURL    string `json:"penguin_base_url"`
 	AzureSpeechKey    string `json:"azure_speech_key"`
 }
 
@@ -119,16 +122,22 @@ func healTTSModel(s settingsFile) settingsFile {
 }
 
 func normalizeAssessmentMode(v string) string {
-	if strings.ToLower(strings.TrimSpace(v)) == "azure" {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "azure":
 		return "azure"
+	case "penguin":
+		return "penguin"
+	default:
+		return "basic"
 	}
-	return "basic"
 }
 
 func normalizeAPIProvider(v string) string {
 	switch strings.ToLower(strings.TrimSpace(v)) {
 	case "openai":
 		return "openai"
+	case "penguin":
+		return "penguin"
 	default:
 		return "openrouter"
 	}
@@ -153,6 +162,8 @@ func normalizeASREngine(v string) string {
 		return "deepgram"
 	case "dashscope", "ds":
 		return "dashscope"
+	case "penguin":
+		return "penguin"
 	default:
 		return "whisper"
 	}
@@ -239,6 +250,9 @@ func normalizeSettings(s settingsFile) settingsFile {
 	if strings.TrimSpace(s.DeepgramBaseURL) == "" {
 		s.DeepgramBaseURL = "https://api.deepgram.com"
 	}
+	if strings.TrimSpace(s.PenguinBaseURL) == "" {
+		s.PenguinBaseURL = buildconfig.PenguinBase()
+	}
 	if strings.TrimSpace(s.TranscribeModel) == "" {
 		if s.EnglishASREngine == "openrouter" {
 			s.TranscribeModel = s.OpenRouterTranscribeModel
@@ -246,6 +260,8 @@ func normalizeSettings(s settingsFile) settingsFile {
 			s.TranscribeModel = "nova-2"
 		} else if s.EnglishASREngine == "dashscope" {
 			s.TranscribeModel = "qwen3-asr-flash"
+		} else if s.EnglishASREngine == "penguin" {
+			s.TranscribeModel = "penguin/asr"
 		} else if s.EnglishASREngine == "openai" || s.EnglishASREngine == "openai_whisper" {
 			if s.EnglishASREngine == "openai_whisper" {
 				s.TranscribeModel = s.OpenAIWhisperModel
@@ -259,6 +275,8 @@ func normalizeSettings(s settingsFile) settingsFile {
 	if strings.TrimSpace(s.TranslateModel) == "" {
 		if s.ForwardTranslator == "openai" && s.APIProvider == "openrouter" {
 			s.TranslateModel = "openai/gpt-4o-mini"
+		} else if s.ForwardTranslator == "openai" && s.APIProvider == "penguin" {
+			s.TranslateModel = "penguin/translate"
 		} else {
 			s.TranslateModel = s.OpenAIForwardModel
 		}

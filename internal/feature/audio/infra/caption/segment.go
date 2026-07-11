@@ -151,6 +151,8 @@ func transcribeSplit(req SegmentRequest) (SegmentResponse, error) {
 		text, _, err = cloudapi.DashScopeTranscribeWAV(req.Creds, modelUse, req.Language, withRecentTranscript(req.Context), req.WAV, req.Timeout)
 	case "deepgram":
 		text, _, err = cloudapi.DeepgramTranscribeWAV(req.Creds, modelUse, req.Language, req.WAV, req.Timeout)
+	case "penguin":
+		text, _, err = cloudapi.PenguinTranscribeWAV(req.Creds, modelUse, req.Language, withRecentTranscript(req.Context), req.WAV, req.Timeout)
 	case "openrouter":
 		text, _, err = cloudapi.OpenRouterTranscribeWAV(req.Creds, modelUse, req.Language, req.WAV)
 	default:

@@ -1,6 +1,10 @@
 package domain
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"translation-overlay/internal/platform/buildconfig"
+)
 
 type Settings struct {
 	OpenAIAPIKey      string               `json:"openai_api_key"`
@@ -11,6 +15,8 @@ type Settings struct {
 	DashScopeBaseURL  string               `json:"dashscope_base_url"`
 	DeepgramAPIKey    string               `json:"deepgram_api_key"`
 	DeepgramBaseURL   string               `json:"deepgram_base_url"`
+	PenguinAPIKey     string               `json:"penguin_api_key"`
+	PenguinBaseURL    string               `json:"penguin_base_url"`
 	AzureSpeechKey    string               `json:"azure_speech_key"`
 	GeminiAPIKey      string               `json:"gemini_api_key"`
 	MicTranslate      MicTranslateSettings `json:"practice"`
@@ -62,6 +68,7 @@ type MicTranslateSettings struct {
 type WindowSettings struct {
 	OpenAIModel         string   `json:"openai_model"`
 	OpenRouterModel     string   `json:"openrouter_model"`
+	PenguinModel        string   `json:"penguin_model"`
 	TranslateBackend    string   `json:"translate_backend"`
 	NLLBBaseURL         string   `json:"nllb_base_url"`
 	PollIntervalMS      int      `json:"poll_interval_ms"`
@@ -125,6 +132,7 @@ func DefaultSettings(engineBaseURL string) Settings {
 		OpenRouterBaseURL: "https://openrouter.ai/api/v1",
 		DashScopeBaseURL:  "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
 		DeepgramBaseURL:   "https://api.deepgram.com",
+		PenguinBaseURL:    buildconfig.PenguinBase(),
 		MicTranslate: MicTranslateSettings{
 			ForwardTranslator:         "openai",
 			OpenAIForwardModel:        "gpt-4o-mini",
@@ -158,6 +166,7 @@ func DefaultSettings(engineBaseURL string) Settings {
 		Window: WindowSettings{
 			OpenAIModel:         "gpt-4o-mini",
 			OpenRouterModel:     "openai/gpt-4o-mini",
+			PenguinModel:        "penguin/ocr-translate",
 			TranslateBackend:    "openrouter",
 			NLLBBaseURL:         engineBaseURL,
 			PollIntervalMS:      1500,

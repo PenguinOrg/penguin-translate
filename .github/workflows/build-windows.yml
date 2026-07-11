@@ -52,8 +52,20 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Write-Host "gofmt clean, vet clean, tests pass"
 
+      - name: Verify release configuration
+        if: github.event_name != 'pull_request'
+        shell: pwsh
+        env:
+          PENGUIN_BASE_URL: ${{ secrets.PENGUIN_BASE_URL }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:PENGUIN_BASE_URL)) {
+            throw "Repository secret PENGUIN_BASE_URL is required for release builds"
+          }
+
       - name: Build release
         shell: pwsh
+        env:
+          PENGUIN_BASE_URL: ${{ secrets.PENGUIN_BASE_URL }}
         run: ./build/scripts/build.ps1
 
       - name: Verify build outputs

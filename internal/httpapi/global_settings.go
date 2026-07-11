@@ -20,12 +20,14 @@ func settingsResponse(app *composition.App, st domain.Settings) map[string]any {
 		"openrouter_key_configured": strings.TrimSpace(st.OpenRouterAPIKey) != "",
 		"dashscope_key_configured":  strings.TrimSpace(st.DashScopeAPIKey) != "",
 		"deepgram_key_configured":   strings.TrimSpace(st.DeepgramAPIKey) != "",
+		"penguin_key_configured":    strings.TrimSpace(st.PenguinAPIKey) != "",
 		"azure_key_configured":      strings.TrimSpace(st.AzureSpeechKey) != "",
 		"gemini_key_configured":     strings.TrimSpace(st.GeminiAPIKey) != "",
 		"openai_base_url":           st.OpenAIBaseURL,
 		"openrouter_base_url":       st.OpenRouterBaseURL,
 		"dashscope_base_url":        st.DashScopeBaseURL,
 		"deepgram_base_url":         st.DeepgramBaseURL,
+		"penguin_base_url":          st.PenguinBaseURL,
 		"skip_words":                append([]string{}, st.Window.SkipWords...),
 		"practice":                  app.MicTranslate.PublicSettings(st),
 		"audio":                     audiohost.PublicSettings(st),
@@ -45,6 +47,9 @@ type unifiedSettingsPost struct {
 	DeepgramAPIKey      string          `json:"deepgram_api_key"`
 	RemoveDeepgramKey   bool            `json:"remove_deepgram_key"`
 	DeepgramBaseURL     string          `json:"deepgram_base_url"`
+	PenguinAPIKey       string          `json:"penguin_api_key"`
+	RemovePenguinKey    bool            `json:"remove_penguin_key"`
+	PenguinBaseURL      string          `json:"penguin_base_url"`
 	AzureSpeechKey      string          `json:"azure_speech_key"`
 	RemoveAzureKey      bool            `json:"remove_azure_key"`
 	GeminiAPIKey        string          `json:"gemini_api_key"`
@@ -128,6 +133,11 @@ func applyUnifiedSettingsPost(st *domain.Settings, in unifiedSettingsPost, body 
 	} else if k := strings.TrimSpace(in.DeepgramAPIKey); k != "" {
 		st.DeepgramAPIKey = k
 	}
+	if in.RemovePenguinKey {
+		st.PenguinAPIKey = ""
+	} else if k := strings.TrimSpace(in.PenguinAPIKey); k != "" {
+		st.PenguinAPIKey = k
+	}
 	if in.RemoveAzureKey {
 		st.AzureSpeechKey = ""
 	} else if k := strings.TrimSpace(in.AzureSpeechKey); k != "" {
@@ -149,6 +159,9 @@ func applyUnifiedSettingsPost(st *domain.Settings, in unifiedSettingsPost, body 
 	}
 	if bodyHasTopKey(body, "deepgram_base_url") {
 		st.DeepgramBaseURL = strings.TrimSpace(in.DeepgramBaseURL)
+	}
+	if bodyHasTopKey(body, "penguin_base_url") {
+		st.PenguinBaseURL = strings.TrimSpace(in.PenguinBaseURL)
 	}
 	if in.SkipWords != nil {
 		st.Window.SkipWords = normalizeSkipWords(in.SkipWords)

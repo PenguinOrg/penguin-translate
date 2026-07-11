@@ -40,6 +40,8 @@ func (h *Host) nativeSettingsFromDisk() nativecloud.Settings {
 			DeepgramBase:   s.DeepgramBaseURL,
 			DashScopeKey:   s.DashScopeAPIKey,
 			DashScopeBase:  s.DashScopeBaseURL,
+			PenguinKey:     s.PenguinAPIKey,
+			PenguinBase:    s.PenguinBaseURL,
 		},
 	}
 }
@@ -49,7 +51,7 @@ func useNativeCloud() bool { return !engine.ManagedEngineAvailable() }
 // cloudOnlyASR reports whether the Python sidecar lacks the requested provider.
 func cloudOnlyASR(asrEngine string) bool {
 	switch cloudapi.NormalizeASREngine(asrEngine) {
-	case "deepgram", "dashscope":
+	case "deepgram", "dashscope", "penguin":
 		return true
 	default:
 		return false

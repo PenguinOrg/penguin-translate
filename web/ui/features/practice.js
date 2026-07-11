@@ -12,7 +12,6 @@ function ensureStyle() {
   document.head.appendChild(l);
 }
 
-// Practice any catalog language; reading aids remain language-specific.
 const MAX_REC_MS = 10000;
 
 export function createPracticeStore(ctx) {
@@ -27,7 +26,6 @@ export function createPracticeStore(ctx) {
     for (const t of tokens) { if (!t || !t.surface) continue; out += t.reading ? '<ruby>' + esc(t.surface) + '<rt>' + esc(t.reading) + '</rt></ruby>' : esc(t.surface); }
     return out || esc(text);
   }
-  // Highlight assessed words by accuracy and error type.
   function assessmentWordsHTML(words, fallback) {
     if (!Array.isArray(words) || !words.length) return esc(fallback || '');
     return words.map((w) => {
@@ -115,7 +113,7 @@ export function createPracticeStore(ctx) {
       const s = await postJSON('/api/settings', { practice: { practice_enabled: true } }, 'POST /api/settings');
       const p = s.practice || {};
       if (Number(p.score_threshold) > 0) S().threshold = Number(p.score_threshold);
-      S().assessmentMode = (p.assessment_mode === 'azure') ? 'azure' : 'basic';
+      S().assessmentMode = (p.assessment_mode === 'azure' || p.assessment_mode === 'penguin') ? p.assessment_mode : 'basic';
       return true;
     } catch (e) { ctx.Toasts?.push?.({ title: tt('practice.title'), msg: e?.message || String(e) }); return false; }
   }
@@ -153,7 +151,7 @@ export function createPracticeStore(ctx) {
     get thresholdLabel() { return tt('practice.threshold', { n: this.threshold }); },
     get hasHeard() { return !!(this.heard.engine || this.heard.text); },
     get heardLine() { const h = this.heard; const parts = []; if (h.engine) parts.push(h.engine); if (h.detected) parts.push(h.detected); return parts.join(' · '); },
-    get usesPronunciationAssessment() { return this.assessmentMode === 'azure'; },
+    get usesPronunciationAssessment() { return this.assessmentMode === 'azure' || this.assessmentMode === 'penguin'; },
     get canHear() { return this.hasPhrase && !this.ttsBusy && !this.recording; },
     get subBars() {
       const s = this.score.sub; if (!s) return [];
@@ -188,7 +186,6 @@ export function createPracticeStore(ctx) {
       this._clearScore();
       try {
         if (!(await ensureReady())) return;
-        // Skip translation when source and target match.
         if (this.srcId === t.id) {
           this.target = sourceText; this.tokens = []; this.attempts = [];
           this.status = tt('practice.statusSayIt');
@@ -280,8 +277,8 @@ export function createPracticeStore(ctx) {
       this.attempts = [...this.attempts, { value, accepted }];
       this.status = accepted ? tt('practice.passed') : tt('practice.statusRetry', { n: this.threshold });
     },
-    // Run provider-backed pronunciation assessment.
     async _assessPronunciation(wav, t) {
+      const engine = this.assessmentMode === 'penguin' ? 'Penguin Cloud' : 'Azure';
       const fd = new FormData();
       fd.append('file', wav, 'clip.wav');
       fd.append('language', t.asr);
@@ -291,10 +288,10 @@ export function createPracticeStore(ctx) {
       if (!r.ok) throw new Error(await httpErrorMessage(r, 'POST /api/assess'));
       const a = await r.json();
       const spoken = (a.recognized_text || '').trim();
-      this.heard = { text: spoken, detected: t.id, engine: 'Azure' };
+      this.heard = { text: spoken, detected: t.id, engine };
       if (!spoken) {
         this.score = { has: false, value: 0, accepted: false, sub: null }; this.spokenHTML = '';
-        this.status = tt('practice.noSpeech', { engine: 'Azure' });
+        this.status = tt('practice.noSpeech', { engine });
         return;
       }
       const value = Math.round(Number(a.score || 0)), accepted = !!a.accepted;

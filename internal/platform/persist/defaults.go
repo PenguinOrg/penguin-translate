@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
+	"translation-overlay/internal/platform/buildconfig"
 	"translation-overlay/internal/platform/domain"
 )
 
@@ -30,6 +31,9 @@ func normalize(st *domain.Settings) {
 	}
 	if strings.TrimSpace(st.DeepgramBaseURL) == "" {
 		st.DeepgramBaseURL = "https://api.deepgram.com"
+	}
+	if strings.TrimSpace(st.PenguinBaseURL) == "" {
+		st.PenguinBaseURL = buildconfig.PenguinBase()
 	}
 	if strings.TrimSpace(st.MicTranslate.LiveModel) == "" {
 		st.MicTranslate.LiveModel = "gemini-3.5-live-translate-preview"

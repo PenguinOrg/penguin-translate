@@ -73,9 +73,9 @@ languages bar.
 - `features/practice.{js,css}` — `createPracticeStore(ctx)`. Docked pronunciation practice,
   opened from the app bar or a translated turn. It translates source text when needed, records on
   its own mic stream while suspending conversation capture, then scores the practiced language.
-  Basic mode calls `/api/transcribe` then `/api/score`; Azure mode calls `/api/assess` for ASR plus
-  pronunciation dimensions and per-word results. Scoring requests include the practiced language;
-  Azure maps it to the catalog's `tts_lang` locale, and the UI renders available reading aids.
+  Basic mode calls `/api/transcribe` then `/api/score`; Azure and Penguin Cloud call `/api/assess`
+  for ASR plus pronunciation dimensions and per-word results. Scoring requests include the practiced
+  language; assessment maps it to the catalog's `tts_lang` locale, and the UI renders available reading aids.
   `playTarget()` calls `/api/tts` and plays the returned audio in-page. Both scoring routes require
   `practice_enabled`; `ensureReady` enables it and refreshes threshold/mode. Practice settings live
   in the Practice preferences pane.
@@ -90,8 +90,8 @@ languages bar.
   plus OpenAI and Deepgram-Aura English; `setTtsEngine` resets model+voice per provider since voice
   ids differ, and Deepgram has none so the voice select hides; all four verified live via the
   `TTS_LIVE=1` host probe, and a retired/unsupported model id self-heals to the Gemini default);
-  **Assessment** = Basic⇄Azure
-  mode, the Azure mode revealing region + `azure_speech_key`; + pass-mark `score_threshold`), **Capture &
+  **Assessment** = Basic, Azure, or Penguin Cloud; Azure reveals region + `azure_speech_key`;
+  all modes share pass-mark `score_threshold`), **Capture &
   audio** (advanced-only; VAD/clip tuning + a live
   mic-activation meter, an imperative WebAudio island), **Overlays & VR**, **Integrations**
   (VRChat OSC), **Diagnostics** (engine info + log tail; adv: the pipeline-latency iframe).
