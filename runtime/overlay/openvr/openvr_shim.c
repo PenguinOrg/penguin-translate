@@ -163,6 +163,44 @@ int wt_vr_pump_events(uint64_t handle) {
     return quit;
 }
 
+// SteamVR exposes thumbsticks as runtime-selected joystick axes.
+// Rust performs edge detection on this level signal.
+static int wt_vr_controller_thumbstick_pressed(TrackedDeviceIndex_t device) {
+    if (!g_system || !g_system->GetControllerState ||
+        !g_system->GetInt32TrackedDeviceProperty ||
+        device == (TrackedDeviceIndex_t)k_unTrackedDeviceIndexInvalid) {
+        return 0;
+    }
+
+    struct VRControllerState_t state;
+    memset(&state, 0, sizeof(state));
+    if (!g_system->GetControllerState(device, &state, sizeof(state))) return 0;
+
+    for (uint32_t axis = 0; axis < k_unControllerStateAxisCount; axis++) {
+        ETrackedPropertyError error = ETrackedPropertyError_TrackedProp_Success;
+        int32_t axis_type = g_system->GetInt32TrackedDeviceProperty(
+            device,
+            (ETrackedDeviceProperty)(ETrackedDeviceProperty_Prop_Axis0Type_Int32 + axis),
+            &error);
+        if (error == ETrackedPropertyError_TrackedProp_Success &&
+            axis_type == EVRControllerAxisType_k_eControllerAxis_Joystick &&
+            (state.ulButtonPressed & (UINT64_C(1) << (EVRButtonId_k_EButton_Axis0 + axis)))) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int wt_vr_both_thumbsticks_pressed(void) {
+    if (!g_system || !g_system->GetTrackedDeviceIndexForControllerRole) return 0;
+    TrackedDeviceIndex_t left = g_system->GetTrackedDeviceIndexForControllerRole(
+        ETrackedControllerRole_TrackedControllerRole_LeftHand);
+    TrackedDeviceIndex_t right = g_system->GetTrackedDeviceIndexForControllerRole(
+        ETrackedControllerRole_TrackedControllerRole_RightHand);
+    return wt_vr_controller_thumbstick_pressed(left) &&
+        wt_vr_controller_thumbstick_pressed(right);
+}
+
 uint64_t wt_vr_overlay_create(const char *key, const char *name) {
     if (!g_overlay) return 0;
     VROverlayHandle_t h = 0;

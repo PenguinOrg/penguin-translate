@@ -1166,6 +1166,13 @@ fn emit_vr_status(ok: bool, detail: &str) {
     let _ = out.flush();
 }
 
+fn emit_toggle_pause() {
+    use std::io::Write;
+    let mut out = std::io::stdout().lock();
+    let _ = writeln!(out, "{{\"event\":\"toggle_pause\"}}");
+    let _ = out.flush();
+}
+
 fn emit_caption_timing(
     req_id: u64,
     deserialize_us: u64,
@@ -1220,6 +1227,7 @@ fn main() {
     let mut vr = VrOverlay::new(&vr_key, &vr_name);
     let mut next_vr_check = Instant::now();
     let mut last_vr_status: Option<bool> = None;
+    let mut both_thumbsticks_were_pressed = false;
 
     overlay.hide_window();
 
@@ -1327,6 +1335,12 @@ fn main() {
                 }
                 next_vr_check = Instant::now();
             }
+
+            let both_thumbsticks_pressed = vr.both_thumbsticks_pressed();
+            if both_thumbsticks_pressed && !both_thumbsticks_were_pressed {
+                emit_toggle_pause();
+            }
+            both_thumbsticks_were_pressed = both_thumbsticks_pressed;
 
             if state.dirty {
                 let mut strip_timing = StripTiming::default();

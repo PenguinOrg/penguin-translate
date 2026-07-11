@@ -30,14 +30,16 @@ type IPCPresenter struct {
 	vrSeen         bool
 	vrOK           bool
 	vrDetail       string
+	onTogglePause  func()
 }
 
-func NewIPCPresenter(desktopEnabled, vrEnabled bool, vrWidthM, vrDistanceM float64) *IPCPresenter {
+func NewIPCPresenter(desktopEnabled, vrEnabled bool, vrWidthM, vrDistanceM float64, onTogglePause func()) *IPCPresenter {
 	p := &IPCPresenter{
 		desktopEnabled: desktopEnabled,
 		vrEnabled:      vrEnabled,
 		vrWidthM:       vrWidthM,
 		vrDistanceM:    vrDistanceM,
+		onTogglePause:  onTogglePause,
 	}
 	p.proc = overlayipc.New(overlayipc.Config{
 		Name: "wt-overlay",
@@ -197,6 +199,11 @@ func (p *IPCPresenter) handleStdout(line string) {
 					"render":  t.SpansUS["render"],
 					"present": t.SpansUS["present"],
 				})
+			}
+			return
+		case "toggle_pause":
+			if p.onTogglePause != nil {
+				p.onTogglePause()
 			}
 			return
 		}

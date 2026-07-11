@@ -10,6 +10,7 @@ extern "C" {
     fn wt_vr_init() -> i32;
     fn wt_vr_shutdown();
     fn wt_vr_pump_events(handle: u64) -> i32;
+    fn wt_vr_both_thumbsticks_pressed() -> i32;
     fn wt_vr_overlay_create(key: *const c_char, name: *const c_char) -> u64;
     fn wt_vr_overlay_destroy(handle: u64);
     fn wt_vr_overlay_set_raw(handle: u64, rgba: *const c_void, width: u32, height: u32) -> i32;
@@ -122,6 +123,10 @@ impl VrOverlay {
             return true;
         }
         false
+    }
+
+    pub fn both_thumbsticks_pressed(&self) -> bool {
+        self.is_ready() && unsafe { wt_vr_both_thumbsticks_pressed() != 0 }
     }
 
     pub fn hide(&self) {

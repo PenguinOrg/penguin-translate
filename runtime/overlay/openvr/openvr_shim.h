@@ -10,6 +10,7 @@ int wt_vr_init(void);
 void wt_vr_shutdown(void);
 int wt_vr_is_ready(void);
 int wt_vr_pump_events(uint64_t handle);
+int wt_vr_both_thumbsticks_pressed(void);
 uint64_t wt_vr_overlay_create(const char *key, const char *name);
 void wt_vr_overlay_destroy(uint64_t handle);
 int wt_vr_overlay_set_raw(uint64_t handle, const void *bgra, uint32_t width, uint32_t height);

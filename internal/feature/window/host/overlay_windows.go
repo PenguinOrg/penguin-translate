@@ -12,7 +12,7 @@ func InitOverlays(r *runner.Runner, w domain.WindowSettings) (*overlay.IPCPresen
 	if !w.OverlayEnabled && !w.VROverlayEnabled {
 		return nil, nil
 	}
-	pres := overlay.NewIPCPresenter(w.OverlayEnabled, w.VROverlayEnabled, w.VRHUDWidthM, w.VRHUDDistanceM)
+	pres := overlay.NewIPCPresenter(w.OverlayEnabled, w.VROverlayEnabled, w.VRHUDWidthM, w.VRHUDDistanceM, r.TogglePaused)
 	r.SetPresenter(pres)
 	pres.Configure(w.OverlayEnabled, w.VROverlayEnabled, w.VRHUDWidthM, w.VRHUDDistanceM)
 	hk := NewHotkeyWindow()
