@@ -31,13 +31,16 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      # Build from the crate root so .cargo/config.toml applies.
       - name: Build overlay sidecar (Rust)
         shell: pwsh
-        run: cargo build --release --manifest-path runtime/overlay/Cargo.toml
+        working-directory: runtime/overlay
+        run: cargo build --release
 
       - name: Test overlay sidecar (Rust)
         shell: pwsh
-        run: cargo test --manifest-path runtime/overlay/Cargo.toml
+        working-directory: runtime/overlay
+        run: cargo test
 
       - name: Build fake OpenVR runtime (Rust)
         shell: pwsh
