@@ -38,7 +38,7 @@
 .pp-target-text:empty::before { content: "—"; color: var(--faint); }
 .pp-target-text.lang-zh { font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", system-ui, sans-serif; }
 .pp-target-text.lang-ko { font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif; }
-.pp-target-text ruby rt { font-size: 0.42em; color: var(--muted); user-select: none; }
+.pp-target-text ruby rt { font-size: 0.58em; line-height: 1.1; color: var(--muted); user-select: none; }
 
 .pp-rec { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px; font-size: 0.9rem; font-weight: 600; border-radius: var(--r-m); background: var(--accent); border: 1px solid var(--accent); color: #fff; }
 .pp-rec:hover:not(:disabled) { background: var(--accent-press); border-color: var(--accent-press); }

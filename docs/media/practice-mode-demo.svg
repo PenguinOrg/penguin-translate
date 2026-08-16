@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 820" width="1280" height="820" role="img" aria-label="Penguin Translate pronunciation practice mode. A translated Japanese phrase is selected from a Chinese conversation. The docked practice panel offers native text-to-speech, hold-to-record, an overall score, accuracy, fluency and completeness bars, and word-level feedback.">
+  <defs>
+    <clipPath id="window"><rect width="1280" height="820" rx="14"/></clipPath>
+    <linearGradient id="target" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#314266"/><stop offset="1" stop-color="#292c33"/></linearGradient>
+    <linearGradient id="score" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#29372f"/><stop offset="1" stop-color="#27282c"/></linearGradient>
+    <filter id="panel-shadow" x="-30%" y="-10%" width="150%" height="120%"><feDropShadow dx="-12" dy="0" stdDeviation="16" flood-color="#000" flood-opacity="0.42"/></filter>
+    <style>
+      text { font-family: "Segoe UI", "Noto Sans", system-ui, sans-serif; }
+      .cjk { font-family: "Noto Sans CJK SC", "Noto Sans CJK JP", "Microsoft YaHei", "Yu Gothic UI", "Meiryo", sans-serif; }
+      .text { fill: #dcdde0; } .bright { fill: #f2f3f5; } .muted { fill: #96979c; }
+      .faint { fill: #6d6e74; } .accent { fill: #8fb0ff; } .ok { fill: #70dda3; }
+      .caps { font-size: 10px; letter-spacing: 1.1px; }
+    </style>
+  </defs>
+
+  <g clip-path="url(#window)">
+    <!-- Native window chrome -->
+    <rect width="1280" height="820" fill="#1c1d21"/>
+    <rect width="1280" height="34" fill="#1b1c20"/>
+    <rect x="14" y="13" width="9" height="9" rx="2" fill="#5b8cff"/>
+    <text x="30" y="23" font-size="13" class="text">Penguin Translate</text>
+    <g stroke="#96979c" stroke-width="1.6" fill="none"><path d="M1195 19h13"/><rect x="1225" y="12" width="11" height="11"/><path d="m1253 12 11 11m0-11-11 11"/></g>
+
+    <!-- Application bar -->
+    <rect y="34" width="1280" height="54" fill="#212226"/>
+    <line x1="0" y1="88" x2="1280" y2="88" stroke="#3e3f45"/>
+    <circle cx="20" cy="61" r="4" fill="#5b8cff"/>
+    <text x="32" y="66" font-size="13" font-weight="600" class="bright">Penguin Translate</text>
+    <text x="180" y="65" font-size="12" class="muted cjk">我说</text>
+    <text x="208" y="65" font-size="12" font-weight="700" class="text">ZH</text>
+    <text x="238" y="65" font-size="13" class="faint">→</text>
+    <g transform="translate(260,47)"><rect width="68" height="28" rx="7" fill="#2e2f34" stroke="#4d4e55"/><circle cx="15" cy="14" r="7" fill="#fff"/><circle cx="15" cy="14" r="4.5" fill="#d64a55"/><text x="29" y="19" font-size="12" font-weight="650" class="bright">JA</text><text x="53" y="19" font-size="11" class="faint">×</text></g>
+    <g transform="translate(336,47)"><rect width="68" height="28" rx="7" fill="#2e2f34" stroke="#4d4e55"/><circle cx="15" cy="14" r="7" fill="#f3f5f8"/><path d="M10 12h10v4H10z" fill="#d94a55"/><path d="M10 12h10v2H10z" fill="#486caf"/><text x="29" y="19" font-size="12" font-weight="650" class="bright">KO</text><text x="53" y="19" font-size="11" class="faint">×</text></g>
+    <rect x="412" y="48" width="27" height="27" rx="7" fill="none" stroke="#4d4e55" stroke-dasharray="3 3"/><text x="425.5" y="67" font-size="17" text-anchor="middle" class="muted">+</text>
+
+    <!-- Active practice and utility buttons -->
+    <g transform="translate(708,45)"><rect width="102" height="32" rx="8" fill="#5b8cff"/><circle cx="17" cy="15" r="5" fill="none" stroke="#fff" stroke-width="1.5"/><path d="M12 16c0 7 10 7 10 0m-5 5v4" fill="none" stroke="#fff" stroke-width="1.5"/><text x="31" y="21" font-size="12.5" font-weight="600" class="cjk" fill="#fff">发音练习</text></g>
+    <g transform="translate(818,45)"><rect width="104" height="32" rx="8" fill="none" stroke="#3e3f45"/><rect x="12" y="9" width="15" height="11" rx="2" fill="none" stroke="#96979c" stroke-width="1.4"/><text x="35" y="21" font-size="12.5" class="cjk muted">叠加到应用</text></g>
+    <g transform="translate(1073,45)"><rect width="137" height="32" rx="16" fill="#2e2f34" stroke="#3e3f45"/><circle cx="18" cy="16" r="12" fill="#414349"/><text x="18" y="20" font-size="11" text-anchor="middle" class="cjk text">访</text><text x="38" y="20" font-size="12" class="cjk text">访客</text><text x="92" y="20" font-size="10" class="cjk muted">本地</text></g>
+    <g transform="translate(1244,61)" stroke="#96979c" fill="none" stroke-width="1.8"><circle r="6"/><path d="M0-11v4m0 14v4m-11-11h4m14 0h4m-8-8 3-3m-9 9-3 3m0-14 3 3m9 9 3 3"/></g>
+
+    <!-- Conversation surface -->
+    <rect y="88" width="910" height="674" fill="#1c1d21"/>
+    <text x="846" y="124" font-size="10.5" text-anchor="end" class="accent cjk">ZH · 回复</text>
+    <g>
+      <rect x="334" y="136" width="512" height="250" rx="14" fill="#242a38" stroke="#34435f"/>
+      <text x="822" y="168" font-size="14" text-anchor="end" class="cjk muted">很高兴认识你，请多关照！</text>
+      <line x1="354" y1="184" x2="826" y2="184" stroke="#34435f"/>
+      <text x="822" y="210" font-size="10.5" text-anchor="end" class="accent cjk">日本語</text>
+      <text x="822" y="248" font-size="22" text-anchor="end" class="cjk bright">はじめまして、よろしくお願いします！</text>
+      <g transform="translate(651,264)"><rect width="171" height="30" rx="15" fill="#314266" stroke="#5b8cff"/><circle cx="17" cy="14" r="4.5" fill="none" stroke="#bcd0ff" stroke-width="1.3"/><path d="M13 15c0 6 8 6 8 0m-4 4v4" fill="none" stroke="#bcd0ff" stroke-width="1.3"/><text x="30" y="20" font-size="12" class="cjk" fill="#d8e3ff">正在练习这句话</text><path d="m152 12 5 4-5 4" fill="none" stroke="#8fb0ff" stroke-width="1.4"/></g>
+      <line x1="354" y1="310" x2="826" y2="310" stroke="#34435f"/>
+      <text x="822" y="336" font-size="10.5" text-anchor="end" class="accent cjk">한국어</text>
+      <text x="822" y="368" font-size="21" text-anchor="end" class="cjk bright">만나서 반가워요. 잘 부탁드립니다!</text>
+    </g>
+    <text x="846" y="407" font-size="10.5" text-anchor="end" class="faint">15:21</text>
+    <text x="28" y="456" font-size="10.5" class="faint cjk">JA · 日本語</text>
+    <g><rect x="28" y="468" width="464" height="104" rx="14" fill="#27282c" stroke="#3e3f45"/><text x="48" y="502" font-size="14" class="cjk muted">発音、とても自然でしたよ。</text><text x="48" y="542" font-size="20" class="cjk bright">你的发音听起来很自然。</text></g>
+    <text x="28" y="593" font-size="10.5" class="faint">15:22</text>
+    <g opacity="0.78"><text x="846" y="633" font-size="10.5" text-anchor="end" class="accent cjk">ZH · 回复</text><rect x="538" y="645" width="308" height="62" rx="14" fill="#242a38" stroke="#34435f"/><text x="822" y="682" font-size="18" text-anchor="end" class="cjk bright">谢谢！我再练习一次。</text></g>
+
+    <!-- Docked practice panel -->
+    <g filter="url(#panel-shadow)"><rect x="910" y="88" width="370" height="674" fill="#212226"/></g>
+    <line x1="910" y1="88" x2="910" y2="762" stroke="#4d4e55"/>
+    <rect x="910" y="88" width="370" height="46" fill="#242529"/>
+    <line x1="910" y1="134" x2="1280" y2="134" stroke="#3e3f45"/>
+    <circle cx="929" cy="111" r="4" fill="#5b8cff"/>
+    <text x="940" y="116" font-size="13" font-weight="650" class="cjk bright">发音练习</text>
+    <text x="1006" y="116" font-size="11" class="muted">ZH → JA</text>
+    <rect x="1239" y="98" width="27" height="27" rx="6" fill="none" stroke="#3e3f45"/><text x="1252.5" y="117" font-size="12" text-anchor="middle" class="muted">✕</text>
+
+    <!-- Source phrase -->
+    <text x="926" y="157" class="caps faint cjk">用中文输入</text>
+    <rect x="926" y="166" width="260" height="36" rx="7" fill="#2e2f34" stroke="#3e3f45"/><text x="938" y="189" font-size="12.5" class="cjk text">很高兴认识你，请多关照！</text>
+    <rect x="1193" y="166" width="71" height="36" rx="7" fill="#5b8cff"/><text x="1228.5" y="189" font-size="12" text-anchor="middle" font-weight="600" class="cjk" fill="#fff">翻译</text>
+
+    <!-- Target phrase with reading aid and TTS -->
+    <rect x="926" y="216" width="338" height="108" rx="10" fill="url(#target)" stroke="#4d4e55"/>
+    <text x="940" y="239" class="caps accent cjk">跟读 · 日本語</text>
+    <circle cx="1238" cy="236" r="14" fill="#2e2f34" stroke="#5b8cff"/><path d="M1232 238h4l5 4v-12l-5 4h-4zm11-4c3 2 3 6 0 8" fill="none" stroke="#bcd0ff" stroke-width="1.5" stroke-linejoin="round"/>
+    <g class="cjk bright" text-anchor="middle"><text x="1095" y="267" font-size="10" class="muted">はじ</text><text x="1095" y="288" font-size="23">初めまして、</text><text x="1095" y="315" font-size="21">よろしくお願いします！</text></g>
+
+    <!-- Record controls -->
+    <rect x="926" y="338" width="284" height="40" rx="9" fill="#5b8cff"/>
+    <circle cx="1018" cy="358" r="6" fill="none" stroke="#fff" stroke-width="1.6"/><path d="M1012 359c0 8 12 8 12 0m-6 6v5" fill="none" stroke="#fff" stroke-width="1.6"/>
+    <text x="1068" y="363" font-size="13" text-anchor="middle" font-weight="600" class="cjk" fill="#fff">再次录音</text>
+    <rect x="1218" y="338" width="46" height="40" rx="9" fill="#2e2f34" stroke="#3e3f45"/><text x="1241" y="364" font-size="20" text-anchor="middle" class="text">↻</text>
+    <text x="926" y="401" font-size="11" class="cjk muted">及格线</text>
+    <rect x="969" y="386" width="58" height="25" rx="6" fill="#2e2f34" stroke="#3e3f45"/><text x="983" y="403" font-size="11" class="text">80%</text><path d="m1013 396 4 5 4-5" fill="none" stroke="#96979c"/>
+    <text x="1264" y="402" font-size="10.5" text-anchor="end" class="faint">Penguin Cloud · JA</text>
+
+    <!-- Rich pronunciation assessment -->
+    <rect x="926" y="421" width="338" height="157" rx="10" fill="url(#score)" stroke="#3e3f45"/>
+    <text x="942" y="458" font-size="27" font-weight="700" class="ok">87%</text><text x="1007" y="448" font-size="13" font-weight="650" class="cjk ok">通过</text><text x="1007" y="465" font-size="10.5" class="cjk faint">及格线 80%</text>
+    <g font-size="11" class="cjk muted">
+      <text x="942" y="497">准确度</text><text x="1246" y="497" text-anchor="end" class="text">92%</text><rect x="1004" y="489" width="212" height="7" rx="3.5" fill="#37383e"/><rect x="1004" y="489" width="195" height="7" rx="3.5" fill="#3dc97f"/>
+      <text x="942" y="523">流利度</text><text x="1246" y="523" text-anchor="end" class="text">84%</text><rect x="1004" y="515" width="212" height="7" rx="3.5" fill="#37383e"/><rect x="1004" y="515" width="178" height="7" rx="3.5" fill="#3dc97f"/>
+      <text x="942" y="549">完整度</text><text x="1246" y="549" text-anchor="end" class="text">100%</text><rect x="1004" y="541" width="212" height="7" rx="3.5" fill="#37383e"/><rect x="1004" y="541" width="212" height="7" rx="3.5" fill="#3dc97f"/>
+    </g>
+    <circle cx="942" cy="565" r="4" fill="#3dc97f"/><circle cx="954" cy="565" r="4" fill="#3dc97f"/><circle cx="966" cy="565" r="4" fill="#3dc97f"/>
+
+    <!-- Word-level feedback -->
+    <text x="926" y="601" class="caps faint cjk">你说的是</text>
+    <g class="cjk" font-size="15"><rect x="926" y="612" width="84" height="28" rx="5" fill="#294138"/><text x="936" y="631" class="bright">初めまして</text><rect x="1016" y="612" width="54" height="28" rx="5" fill="#294138"/><text x="1026" y="631" class="bright">よろしく</text><rect x="1076" y="612" width="94" height="28" rx="5" fill="#463a29"/><text x="1086" y="631" fill="#f0c49a">お願いします</text></g>
+    <rect x="926" y="653" width="10" height="10" rx="3" fill="#3d7657"/><text x="942" y="662" font-size="10.5" class="cjk faint">匹配</text><text x="973" y="662" font-size="10.5" class="faint">·</text><rect x="983" y="653" width="10" height="10" rx="3" fill="#654d2e"/><text x="999" y="662" font-size="10.5" class="cjk faint">需要注意</text>
+
+    <!-- Panel footer -->
+    <line x1="910" y1="714" x2="1280" y2="714" stroke="#3e3f45"/>
+    <text x="926" y="744" font-size="11.5" class="cjk ok">已通过！可以继续下一句。</text>
+    <rect x="1198" y="726" width="66" height="28" rx="7" fill="#2e2f34" stroke="#3e3f45"/><text x="1231" y="745" font-size="11.5" text-anchor="middle" class="cjk text">下一句</text>
+
+    <!-- Shared capture bar -->
+    <rect y="762" width="1280" height="58" fill="#212226"/><line x1="0" y1="762" x2="1280" y2="762" stroke="#3e3f45"/>
+    <rect x="15" y="776" width="30" height="30" rx="8" fill="#2e2f34" stroke="#5b8cff"/><circle cx="30" cy="788" r="4" fill="none" stroke="#dcdde0" stroke-width="1.3"/><path d="M26 789c0 6 8 6 8 0m-4 4v5" fill="none" stroke="#dcdde0" stroke-width="1.3"/>
+    <rect x="52" y="776" width="129" height="30" rx="8" fill="#2e2f34" stroke="#3e3f45"/><text x="65" y="795" font-size="11.5" class="cjk text">默认麦克风</text><path d="m166 788 5 5 5-5" fill="none" stroke="#96979c"/>
+    <rect x="189" y="787" width="34" height="7" rx="3.5" fill="#37383e"/><rect x="189" y="787" width="18" height="7" rx="3.5" fill="#3dc97f"/>
+    <rect x="242" y="776" width="30" height="30" rx="8" fill="#2e2f34" stroke="#5b8cff"/><path d="M250 792v-4a7 7 0 0 1 14 0v4m-15 0h4v7h-4zm12 0h4v7h-4z" fill="none" stroke="#dcdde0" stroke-width="1.3"/>
+    <rect x="279" y="776" width="112" height="30" rx="8" fill="#2e2f34" stroke="#3e3f45"/><text x="292" y="795" font-size="11.5" class="cjk text">系统音频</text><path d="m376 788 5 5 5-5" fill="none" stroke="#96979c"/>
+    <rect x="407" y="775" width="484" height="32" rx="9" fill="#2e2f34" stroke="#3e3f45"/><text x="421" y="796" font-size="11.5" class="cjk faint">输入回复…</text>
+    <rect x="1118" y="775" width="76" height="32" rx="8" fill="#5b8cff"/><text x="1156" y="796" font-size="12" text-anchor="middle" class="cjk" fill="#fff">开始</text><circle cx="1215" cy="791" r="4" fill="#6d6e74"/><text x="1262" y="796" font-size="11.5" text-anchor="end" class="cjk muted">就绪</text>
+
+    <rect x="0.5" y="0.5" width="1279" height="819" rx="14" fill="none" stroke="#000" stroke-opacity="0.55"/>
+  </g>
+</svg>

@@ -1,17 +1,27 @@
 import en from '/ui/i18n/en.js';
+import es from '/ui/i18n/es.js';
+import fr from '/ui/i18n/fr.js';
 import ja from '/ui/i18n/ja.js';
 import zh from '/ui/i18n/zh.js';
+import zhTW from '/ui/i18n/zh-tw.js';
 import ko from '/ui/i18n/ko.js';
+import pt from '/ui/i18n/pt.js';
 
-export const DICTS = { en, ja, zh, ko };
+export const DICTS = { en, es, fr, ja, zh, 'zh-tw': zhTW, ko, pt };
 
 // Keep in sync with internal/platform/lang/languages CanonicalID;
 // anything not listed falls back to English.
 const ALIASES = {
   jp: 'ja', jpn: 'ja', japanese: 'ja',
+  es: 'es', spa: 'es', spanish: 'es',
+  fr: 'fr', fra: 'fr', french: 'fr',
   cn: 'zh', zho: 'zh', chinese: 'zh', 'zh-cn': 'zh', zh_hans: 'zh',
+  tw: 'zh-tw', 'zh-tw': 'zh-tw', zh_tw: 'zh-tw', 'zh-hant': 'zh-tw', zh_hant: 'zh-tw', 'zh-hant-tw': 'zh-tw', zh_hant_tw: 'zh-tw', zho_hant: 'zh-tw', traditional: 'zh-tw', 'traditional chinese': 'zh-tw',
+  yue: 'yue', 'yue-hant': 'yue', yue_hant: 'yue', 'yue-hant-hk': 'yue', yue_hant_hk: 'yue', 'yue-hk': 'yue', yue_hk: 'yue', 'yue-cn': 'yue', yue_cn: 'yue', canton: 'yue', cantonese: 'yue', 'yue chinese': 'yue', 'chinese cantonese': 'yue', 'chinese (cantonese)': 'yue', 'zh-yue': 'yue', zh_yue: 'yue',
+  wuu: 'wuu', 'wuu-hani': 'wuu', wuu_hani: 'wuu', 'wuu-hani-cn': 'wuu', wuu_hani_cn: 'wuu', 'wuu-cn': 'wuu', wuu_cn: 'wuu', wu: 'wuu', 'wu chinese': 'wuu', 'chinese wu': 'wuu', 'chinese (wu)': 'wuu', 'zh-wuu': 'wuu', zh_wuu: 'wuu',
   kr: 'ko', kor: 'ko', korean: 'ko',
   eng: 'en', english: 'en',
+  pt: 'pt', por: 'pt', portuguese: 'pt',
 };
 
 export function baseCode(id) {

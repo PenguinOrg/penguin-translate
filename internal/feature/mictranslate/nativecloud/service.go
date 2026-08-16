@@ -27,18 +27,6 @@ type Settings struct {
 	Credentials               cloudapi.Credentials
 }
 
-func (s Settings) targetKind() string {
-	id := strings.ToLower(strings.TrimSpace(s.TargetLanguage))
-	switch id {
-	case "zh", "cn", "chinese":
-		return "zh"
-	case "ko", "kr", "korean":
-		return "ko"
-	default:
-		return "jp"
-	}
-}
-
 func (s Settings) forwardModel() string {
 	if m := strings.TrimSpace(s.TranslateModel); m != "" {
 		return m
@@ -86,13 +74,21 @@ type TranslateResult map[string]any
 
 func TranslateEnglish(s Settings, english string) (TranslateResult, error) {
 	english = strings.TrimSpace(english)
-	kind := s.targetKind()
-	prof := languages.Get(s.TargetLanguage)
+	targetLang, ok := languages.Lang(s.TargetLanguage)
+	if !ok {
+		return nil, fmt.Errorf("unsupported target language %q", strings.TrimSpace(s.TargetLanguage))
+	}
 	target := ""
 	var err error
 	if english != "" {
 		if strings.ToLower(strings.TrimSpace(s.ForwardTranslator)) == "openai" {
-			target, err = cloudapi.TranslateEnglishToTarget(s.Credentials, s.forwardModel(), kind, english)
+			target, err = cloudapi.TranslateEnglishToTarget(
+				s.Credentials,
+				s.forwardModel(),
+				targetLang.ID,
+				targetLang.Label,
+				english,
+			)
 		} else {
 			return nil, fmt.Errorf("local NLLB forward translation requires the Python engine")
 		}
@@ -101,16 +97,13 @@ func TranslateEnglish(s Settings, english string) (TranslateResult, error) {
 		}
 	}
 	furi := []map[string]string{}
-	if target != "" && kind == "jp" {
-		toks, _ := furigana.Tokens(target)
-		for _, t := range toks {
-			furi = append(furi, map[string]string{"surface": t.Surface, "reading": t.Reading})
-		}
+	if targetLang.ReadingAid == languages.ReadingAidFurigana {
+		furi = readingAidTokens(targetLang.ReadingAid, target)
 	}
 	back := ""
 	bt := effectiveBacktranslate(s)
 	if target != "" && bt == "openai" {
-		back, err = cloudapi.BacktranslateTargetToEnglish(s.Credentials, s.backModel(), kind, target)
+		back, err = cloudapi.BacktranslateTargetToEnglish(s.Credentials, s.backModel(), targetLang.Label, target)
 		if err != nil {
 			back = ""
 		}
@@ -119,7 +112,7 @@ func TranslateEnglish(s Settings, english string) (TranslateResult, error) {
 		"english":            english,
 		"japanese":           target,
 		"target":             target,
-		"target_lang":        prof.ID,
+		"target_lang":        targetLang.ID,
 		"furigana":           furi,
 		"back_english":       back,
 		"detected_language":  "en",
@@ -147,7 +140,10 @@ func readingAidTokens(aid languages.ReadingAid, text string) []map[string]string
 
 func TranslateOne(s Settings, srcID, tgtID, text string) (map[string]any, error) {
 	text = strings.TrimSpace(text)
-	tgt := languages.LangOr(tgtID)
+	tgt, ok := languages.Lang(tgtID)
+	if !ok {
+		return nil, fmt.Errorf("unsupported target language %q", strings.TrimSpace(tgtID))
+	}
 	srcLabel := "the source language"
 	if src, ok := languages.Lang(srcID); ok {
 		srcLabel = src.Label

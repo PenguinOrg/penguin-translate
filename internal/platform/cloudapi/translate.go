@@ -5,26 +5,21 @@ import (
 	"time"
 )
 
-func forwardSystemPrompt(kind string) string {
-	switch kind {
+func forwardSystemPrompt(targetID, targetLabel string) string {
+	instruction := ""
+	switch targetID {
 	case "zh":
-		return "You translate English into natural Simplified Chinese for spoken dialogue. Translate the entire input completely; do not summarize, omit, or shorten any part. Output only the Chinese translation, no pinyin, no explanations, no quotes."
-	case "ko":
-		return "You translate English into natural Korean for spoken dialogue. Translate the entire input completely; do not summarize, omit, or shorten any part. Output only the Korean translation, no romanization, no explanations, no quotes."
-	default:
-		return "You translate English into natural Japanese for spoken dialogue. Translate the entire input completely; do not summarize, omit, or shorten any part. Output only the Japanese translation, no romaji, no explanations, no quotes."
+		instruction = " Use Simplified Chinese characters."
+	case "zh-tw":
+		instruction = " Use Traditional Chinese characters (繁體中文)."
+	case "yue":
+		instruction = " Use natural written Cantonese in Traditional Chinese characters."
+	case "wuu":
+		instruction = " Use natural written Wu Chinese in Chinese characters."
 	}
-}
-
-func backSystemPrompt(kind string) string {
-	switch kind {
-	case "zh":
-		return "Translate the following Simplified Chinese into natural English. Output only the English translation."
-	case "ko":
-		return "Translate the following Korean into natural English. Output only the English translation."
-	default:
-		return "Translate the following Japanese into natural English. Output only the English translation."
-	}
+	return "You translate English into natural " + targetLabel + " for spoken dialogue." + instruction +
+		" Translate the entire input completely; do not summarize, omit, or shorten any part. " +
+		"Output only the " + targetLabel + " translation, with no transliteration, no explanations, and no quotes."
 }
 
 func translateSystemPrompt(srcLabel, tgtLabel string) string {
@@ -41,20 +36,20 @@ func Translate(creds Credentials, model, srcLabel, tgtLabel, text string) (strin
 	return ChatCompletion(creds, model, translateSystemPrompt(srcLabel, tgtLabel), text, 0.2)
 }
 
-func TranslateEnglishToTarget(creds Credentials, model, kind, english string) (string, error) {
+func TranslateEnglishToTarget(creds Credentials, model, targetID, targetLabel, english string) (string, error) {
 	english = strings.TrimSpace(english)
 	if english == "" {
 		return "", nil
 	}
-	return ChatCompletion(creds, model, forwardSystemPrompt(kind), english, 0.2)
+	return ChatCompletion(creds, model, forwardSystemPrompt(targetID, targetLabel), english, 0.2)
 }
 
-func BacktranslateTargetToEnglish(creds Credentials, model, kind, target string) (string, error) {
+func BacktranslateTargetToEnglish(creds Credentials, model, sourceLabel, target string) (string, error) {
 	target = strings.TrimSpace(target)
 	if target == "" {
 		return "", nil
 	}
-	return ChatCompletion(creds, model, backSystemPrompt(kind), target, 0.2)
+	return ChatCompletion(creds, model, translateSystemPrompt(sourceLabel, "English"), target, 0.2)
 }
 
 func NormalizeASREngine(v string) string {

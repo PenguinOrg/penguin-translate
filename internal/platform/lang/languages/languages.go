@@ -44,6 +44,41 @@ var profiles = []Profile{
 		BackSrcNLLB:   "zho_Hans",
 	},
 	{
+		ID:            "zh-tw",
+		Label:         "Chinese (Traditional)",
+		ShortLabel:    "ZH-TW",
+		SourceASRLang: "en",
+		TargetASRLang: "zh",
+		SrcNLLB:       "eng_Latn",
+		TgtNLLB:       "zho_Hant",
+		TTSLang:       "zh-TW",
+		HasFurigana:   false,
+		ScorePath:     "/score-zh",
+		BackSrcNLLB:   "zho_Hant",
+	},
+	{
+		ID:            "yue",
+		Label:         "Chinese (Cantonese)",
+		ShortLabel:    "YUE",
+		SourceASRLang: "en",
+		TargetASRLang: "yue",
+		SrcNLLB:       "eng_Latn",
+		TgtNLLB:       "yue_Hant",
+		TTSLang:       "zh-HK",
+		ScorePath:     "/api/score",
+		BackSrcNLLB:   "yue_Hant",
+	},
+	{
+		ID:            "wuu",
+		Label:         "Chinese (Wu)",
+		ShortLabel:    "WUU",
+		SourceASRLang: "en",
+		TargetASRLang: "wuu",
+		SrcNLLB:       "eng_Latn",
+		TTSLang:       "wuu-CN",
+		ScorePath:     "/api/score",
+	},
+	{
 		ID:            "ko",
 		Label:         "Korean",
 		ShortLabel:    "KO",
@@ -66,6 +101,10 @@ func All() []Profile {
 
 func Get(id string) Profile {
 	id = strings.ToLower(strings.TrimSpace(id))
+	switch cid := CanonicalID(id); cid {
+	case "zh-tw", "yue", "wuu":
+		id = cid
+	}
 	for _, p := range profiles {
 		if p.ID == id {
 			return p
@@ -75,6 +114,10 @@ func Get(id string) Profile {
 }
 
 func NormalizeID(id string) string {
+	switch cid := CanonicalID(id); cid {
+	case "zh-tw", "yue", "wuu":
+		return cid
+	}
 	return Get(id).ID
 }
 
@@ -102,6 +145,9 @@ var registry = []Language{
 	{ID: "en", Label: "English", ShortLabel: "EN", Flag: "🇬🇧", ASRCode: "en", NLLBCode: "eng_Latn", TTSLang: "en-US", ReadingAid: ReadingAidNone},
 	{ID: "ja", Label: "Japanese", ShortLabel: "JA", Flag: "🇯🇵", ASRCode: "ja", NLLBCode: "jpn_Jpan", TTSLang: "ja-JP", ReadingAid: ReadingAidFurigana},
 	{ID: "zh", Label: "Chinese (Simplified)", ShortLabel: "ZH", Flag: "🇨🇳", ASRCode: "zh", NLLBCode: "zho_Hans", TTSLang: "zh-CN", ReadingAid: ReadingAidPinyin},
+	{ID: "zh-tw", Label: "Chinese (Traditional)", ShortLabel: "ZH-TW", Flag: "🇹🇼", ASRCode: "zh", NLLBCode: "zho_Hant", TTSLang: "zh-TW", ReadingAid: ReadingAidPinyin},
+	{ID: "yue", Label: "Chinese (Cantonese)", ShortLabel: "YUE", Flag: "🇭🇰", ASRCode: "yue", NLLBCode: "yue_Hant", TTSLang: "zh-HK", ReadingAid: ReadingAidNone},
+	{ID: "wuu", Label: "Chinese (Wu)", ShortLabel: "WUU", Flag: "🇨🇳", ASRCode: "wuu", TTSLang: "wuu-CN", ReadingAid: ReadingAidNone},
 	{ID: "ko", Label: "Korean", ShortLabel: "KO", Flag: "🇰🇷", ASRCode: "ko", NLLBCode: "kor_Hang", TTSLang: "ko-KR", ReadingAid: ReadingAidRomaja},
 	{ID: "es", Label: "Spanish", ShortLabel: "ES", Flag: "🇪🇸", ASRCode: "es", NLLBCode: "spa_Latn", TTSLang: "es-ES", ReadingAid: ReadingAidNone},
 	{ID: "fr", Label: "French", ShortLabel: "FR", Flag: "🇫🇷", ASRCode: "fr", NLLBCode: "fra_Latn", TTSLang: "fr-FR", ReadingAid: ReadingAidNone},
@@ -114,13 +160,16 @@ var registry = []Language{
 var langAliases = map[string]string{
 	"jp": "ja", "jpn": "ja", "japanese": "ja",
 	"zh": "zh", "cn": "zh", "zho": "zh", "chinese": "zh", "zh-cn": "zh", "zh_hans": "zh",
+	"tw": "zh-tw", "zh-tw": "zh-tw", "zh_tw": "zh-tw", "zh-hant": "zh-tw", "zh_hant": "zh-tw", "zh-hant-tw": "zh-tw", "zh_hant_tw": "zh-tw", "zho_hant": "zh-tw", "traditional": "zh-tw", "traditional chinese": "zh-tw",
+	"yue": "yue", "yue-hant": "yue", "yue_hant": "yue", "yue-hant-hk": "yue", "yue_hant_hk": "yue", "yue-hk": "yue", "yue_hk": "yue", "yue-cn": "yue", "yue_cn": "yue", "canton": "yue", "cantonese": "yue", "yue chinese": "yue", "chinese cantonese": "yue", "chinese (cantonese)": "yue", "zh-yue": "yue", "zh_yue": "yue",
+	"wuu": "wuu", "wuu-hani": "wuu", "wuu_hani": "wuu", "wuu-hani-cn": "wuu", "wuu_hani_cn": "wuu", "wuu-cn": "wuu", "wuu_cn": "wuu", "wu": "wuu", "wu chinese": "wuu", "chinese wu": "wuu", "chinese (wu)": "wuu", "zh-wuu": "wuu", "zh_wuu": "wuu",
 	"ko": "ko", "kr": "ko", "kor": "ko", "korean": "ko",
 	"en": "en", "eng": "en", "english": "en",
-	"es": "es", "spa": "es", "spanish": "es",
-	"fr": "fr", "fra": "fr", "french": "fr",
+	"es": "es", "es-es": "es", "spa": "es", "spanish": "es",
+	"fr": "fr", "fr-fr": "fr", "fra": "fr", "french": "fr",
 	"de": "de", "deu": "de", "ger": "de", "german": "de",
 	"it": "it", "ita": "it", "italian": "it",
-	"pt": "pt", "por": "pt", "portuguese": "pt",
+	"pt": "pt", "pt-pt": "pt", "por": "pt", "portuguese": "pt",
 	"ru": "ru", "rus": "ru", "russian": "ru",
 }
 
@@ -159,11 +208,13 @@ func LangOr(id string) Language {
 // GeminiCode maps an app language id to the BCP-47 code the Gemini Live Translate
 // model expects. Most ids pass through as their ASR code; the exceptions are the
 // scripts/regions where Gemini only accepts a qualified tag (zh → zh-Hans,
-// pt → pt-PT) while the app catalog stores the bare code.
+// zh-tw → zh-Hant, pt → pt-PT) while the app catalog stores the app id.
 func GeminiCode(id string) string {
 	switch CanonicalID(id) {
 	case "zh":
 		return "zh-Hans"
+	case "zh-tw":
+		return "zh-Hant"
 	case "pt":
 		return "pt-PT"
 	default:

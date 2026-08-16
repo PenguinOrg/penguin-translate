@@ -12,28 +12,32 @@ import (
 	"translation-overlay/internal/platform/lang/languages"
 )
 
-func nllbTargetCode(target string) string {
+func nllbTargetCode(target string) (string, error) {
 	target = strings.ToLower(strings.TrimSpace(target))
 	if target == "" || target == "en" {
-		return "eng_Latn"
+		return "eng_Latn", nil
 	}
 	if l, ok := languages.Lang(target); ok && l.NLLBCode != "" {
-		return l.NLLBCode
+		return l.NLLBCode, nil
+	} else if ok {
+		return "", fmt.Errorf("language %q is not supported by the local NLLB engine", l.Label)
 	}
-	return "eng_Latn"
+	return "eng_Latn", nil
 }
 
 // nllbSourceCode mirrors nllbTargetCode for the source side: "auto" lets the engine
 // auto-detect, a known language maps to its NLLB code, and anything else stays "auto".
-func nllbSourceCode(source string) string {
+func nllbSourceCode(source string) (string, error) {
 	source = strings.ToLower(strings.TrimSpace(source))
 	if source == "" || source == "auto" {
-		return "auto"
+		return "auto", nil
 	}
 	if l, ok := languages.Lang(source); ok && l.NLLBCode != "" {
-		return l.NLLBCode
+		return l.NLLBCode, nil
+	} else if ok {
+		return "", fmt.Errorf("language %q is not supported by the local NLLB engine", l.Label)
 	}
-	return "auto"
+	return "auto", nil
 }
 
 type NLLBClient struct {
@@ -109,14 +113,22 @@ func (c *NLLBClient) ToTargetBatch(lines []string, sourceLang string) ([]LineRes
 	if len(lines) == 0 {
 		return nil, nil
 	}
+	sourceCode, err := nllbSourceCode(sourceLang)
+	if err != nil {
+		return nil, err
+	}
+	targetCode, err := nllbTargetCode(c.Target)
+	if err != nil {
+		return nil, err
+	}
 	items := make([]batchLineIn, len(lines))
 	for i, line := range lines {
 		items[i] = batchLineIn{ID: i, Text: line}
 	}
 	body := map[string]any{
 		"items":       items,
-		"source_lang": nllbSourceCode(sourceLang),
-		"target_lang": nllbTargetCode(c.Target),
+		"source_lang": sourceCode,
+		"target_lang": targetCode,
 	}
 	raw, err := json.Marshal(body)
 	if err != nil {
