@@ -208,6 +208,10 @@ async function main() {
     const chipReady = await waitFor(`document.querySelectorAll('#langSet .lchip').length===1 && /JA/.test(document.querySelector('#langSet .lchip')?.textContent||'')`, 15000);
     ok('output set shows one Japanese chip (from real /api/settings)', chipReady,
       await evaluate(`[...document.querySelectorAll('#langSet .lchip')].map(c=>c.textContent.trim()).join('|')`));
+    ok('run bar uses the Start/Stop button without a duplicate listening label',
+      await evaluate(`!document.getElementById('runStatus') && !document.getElementById('runStatusText')`));
+    ok('repeated runtime errors collapse into one toast',
+      await evaluate(`(()=>{const t=window.App.Toasts; t.clear(); const o={title:'repeat',msg:'same error',timeout:5000,dedupeKey:'e2e-repeat'}; t.push(o); t.push(o); const one=t.items.length===1; t.clear(); return one;})()`));
     await shot('e2e-01-boot.png');
 
     await waitFor(`!!document.querySelector('.runbar .conv-composer input')`, 10000);
@@ -229,10 +233,41 @@ async function main() {
     const gotStt = await waitHits(() => hits.stt > sttBefore, 25000);
     const micOk = await waitFor(newTurnWithFixture(outBefore2), 12000);
     await shot('e2e-03-mic.png');
-    await evaluate(`document.getElementById('btnRun').click()`);
     ok('fake mic drove a real transcribe to the mock cloud (audio/transcriptions)', gotStt, `stt hits=${hits.stt}`);
     ok('recognized speech fanned out to a real translate', hits.chat > chatBefore2, `chat hits=${hits.chat}`);
     ok('spoken turn rendered the translation in a NEW outgoing turn', micOk);
+
+    const activeSaved = await waitFor(`fetch('/api/settings').then(r=>r.json()).then(j=>j.practice?.session_active===true).catch(()=>false)`, 10000);
+    ok('Start persists the active listening state', activeSaved);
+
+    await evaluate(`(()=>{const L=window.Alpine.store('langs'); if(!L.others.includes('fr')) L.toggleOther('fr'); if(!L.others.includes('yue')) L.toggleOther('yue');})()`);
+    const threeLanguages = await waitFor(`window.App.getLangs().others.join(',')==='ja,fr,yue' && document.querySelectorAll('#langSet .lchip').length===3`, 10000);
+    ok('additional output languages render as draggable chips', threeLanguages);
+    const dragDispatched = await evaluate(`(()=>{
+      const chips=[...document.querySelectorAll('#langSet .lchip')];
+      const from=chips.find(c=>/YUE/.test(c.textContent));
+      const target=chips.find(c=>/JA/.test(c.textContent));
+      if(!from||!target) return false;
+      const dt=new DataTransfer(), rect=target.getBoundingClientRect();
+      from.dispatchEvent(new DragEvent('dragstart',{bubbles:true,cancelable:true,dataTransfer:dt}));
+      target.dispatchEvent(new DragEvent('dragover',{bubbles:true,cancelable:true,dataTransfer:dt,clientX:rect.left+1}));
+      target.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:dt,clientX:rect.left+1}));
+      from.dispatchEvent(new DragEvent('dragend',{bubbles:true,dataTransfer:dt}));
+      return true;
+    })()`);
+    const reordered = dragDispatched && await waitFor(`window.App.getLangs().others.join(',')==='yue,ja,fr' && fetch('/api/settings').then(r=>r.json()).then(j=>j.practice?.other_languages?.join(',')==='yue,ja,fr').catch(()=>false)`, 10000);
+    ok('dragging a chip reorders and persists the output languages', reordered,
+      await evaluate(`window.App.getLangs().others.join(',')`));
+    await shot('e2e-04-reordered.png');
+
+    await send('Page.reload', { ignoreCache: true });
+    const resumed = await waitFor(`!!window.App && window.App.RunController.running===true`, 30000);
+    ok('the previous listening state resumes after the UI reopens', resumed);
+    ok('the reordered language sequence survives reopening',
+      await waitFor(`!!window.App && window.App.getLangs().others.join(',')==='yue,ja,fr'`, 15000));
+    await evaluate(`document.getElementById('btnRun').click()`);
+    const stoppedSaved = await waitFor(`window.App.RunController.running===false && fetch('/api/settings').then(r=>r.json()).then(j=>j.practice?.session_active===false).catch(()=>false)`, 10000);
+    ok('Stop persists the inactive listening state', stoppedSaved);
 
     ok('no runtime exceptions across the run',
       exceptions.filter((e) => /SyntaxError|ReferenceError|is not defined|TypeError/.test(e)).length === 0,

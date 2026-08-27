@@ -16,14 +16,45 @@ Alpine.store('i18n', {
 Alpine.store('toasts', {
   items: [],
   _id: 0,
-  push({ severity = 'error', title = '', msg = '', actions = [], timeout = 0 } = {}) {
+  maxItems: 6,
+  push({ severity = 'error', title = '', msg = '', actions = [], timeout = 0, dedupeKey = '' } = {}) {
+    const normalizedSeverity = severity === 'warn' ? 'warn' : 'err';
+    const key = String(dedupeKey || '');
+    const existing = key ? this.items.find((t) => t.dedupeKey === key) : null;
+    if (existing) {
+      existing.severity = normalizedSeverity;
+      existing.title = title;
+      existing.msg = msg;
+      existing.actions = actions;
+      existing.timeout = timeout;
+      if (existing.timer) clearTimeout(existing.timer);
+      if (timeout > 0) existing.timer = setTimeout(() => this.dismiss(existing.id), timeout);
+      return existing.id;
+    }
     const id = ++this._id;
-    this.items.push({ id, severity: severity === 'warn' ? 'warn' : 'err', title, msg, actions });
-    if (timeout > 0) setTimeout(() => this.dismiss(id), timeout);
+    const toast = { id, severity: normalizedSeverity, title, msg, actions, dedupeKey: key, timeout, timer: null };
+    this.items.push(toast);
+    this.trim();
+    if (timeout > 0) toast.timer = setTimeout(() => this.dismiss(id), timeout);
     return id;
   },
-  dismiss(id) { const i = this.items.findIndex((t) => t.id === id); if (i >= 0) this.items.splice(i, 1); },
-  clear() { this.items.splice(0, this.items.length); },
+  dismiss(id) {
+    const i = this.items.findIndex((t) => t.id === id);
+    if (i >= 0) {
+      if (this.items[i].timer) clearTimeout(this.items[i].timer);
+      this.items.splice(i, 1);
+    }
+  },
+  trim() {
+    while (this.items.length > this.maxItems) {
+      const transient = this.items.find((t) => t.timeout > 0);
+      this.dismiss((transient || this.items[0]).id);
+    }
+  },
+  clear() {
+    this.items.forEach((t) => { if (t.timer) clearTimeout(t.timer); });
+    this.items.splice(0, this.items.length);
+  },
   runAction(tt, a) { try { a.onClick?.(); } finally { if (a.dismiss !== false) this.dismiss(tt.id); } },
 });
 

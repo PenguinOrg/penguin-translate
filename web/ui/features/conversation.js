@@ -57,8 +57,6 @@ export function createConversationStore(ctx) {
   }
   let turnId = 0;
   const scrollAfter = () => Alpine.nextTick(() => { const t = document.getElementById('convThread'); if (t) t.scrollTop = t.scrollHeight; });
-  const setStatus = (m) => { S().status = m; };
-
   function appendIncoming({ original, detectedId, translation, tokens }) {
     const L = lang(detectedId);
     S().turns.push({ id: ++turnId, kind: 'in', who: { flag: L.flag, label: langName(detectedId, L.label) }, original, transHTML: translation ? rubyHTML(translation, tokens) : esc(original), time: clock() });
@@ -108,18 +106,16 @@ export function createConversationStore(ctx) {
     try {
       const out = await translateMulti(text, detected, [myLang]); const res = (out.results || [])[0] || {};
       appendIncoming({ original: text, detectedId: detected || out.source_language, translation: res.text || '', tokens: res.reading_aid_tokens || [] });
-    } catch (e) { appendIncoming({ original: text, detectedId: detected, translation: '', tokens: [] }); setStatus(tt('run.status.Listening') + ' · ' + (e?.message || e)); }
+    } catch (e) { appendIncoming({ original: text, detectedId: detected, translation: '', tokens: [] }); showError(e); }
   }
   async function handleIncomingClip(pcm) {
     if (!pcm || !pcm.length) return;
-    setStatus(tt('conv.statusTranscribing'));
     const fd = new FormData(); fd.append('file', buildWav(pcm), 'clip.wav');
     fd.append('diarize', cfg.diarize ? '1' : '0'); fd.append('translate_to_en', '1');
     fd.append('language', incomingHint() || 'auto'); fd.append('openvr_overlay', cfg.openvr ? '1' : '0');
     let j; try { const r = await fetch('/api/transcribe-segment', { method: 'POST', body: fd }); if (!r.ok) throw new Error(await httpErrorMessage(r, 'POST /api/transcribe-segment')); j = await r.json(); }
-    catch (e) { setStatus(tt('run.status.Listening') + ' · ' + (e?.message || e)); return; }
+    catch (e) { showError(e); return; }
     if (!j.filtered) for (const seg of (j.segments || [])) { const t = (seg.text || '').trim(); if (t) await renderIncoming(t, j.language || incomingHint(), myLang === 'en' ? (seg.english || '') : ''); }
-    if (S().listening) setStatus(tt('run.status.Listening'));
   }
 
   async function sendOutgoing(text) {
@@ -136,15 +132,12 @@ export function createConversationStore(ctx) {
     } catch (e) {
       const idx = S().turns.findIndex((t) => t.id === id); if (idx >= 0) S().turns.splice(idx, 1);
       ctx.Toasts?.push?.({ title: tt('conv.replyFailed'), msg: e?.message || String(e) });
-      setStatus(tt('conv.replyFailedStatus', { err: e?.message || e }));
     }
   }
   async function handleMicClip(pcm) {
     if (!pcm || !pcm.length) return;
-    setStatus(tt('conv.statusTranscribingSpeech'));
-    let tr; try { tr = await transcribe(buildWav(pcm), lang(myLang).asr_code); } catch (e) { setStatus(tt('run.status.Listening') + ' · ' + (e?.message || e)); return; }
+    let tr; try { tr = await transcribe(buildWav(pcm), lang(myLang).asr_code); } catch (e) { showError(e); return; }
     const text = (tr.text || '').trim(); if (text) await sendOutgoing(text);
-    if (S().listening) setStatus(tt('run.status.Listening'));
   }
 
   const VAD_FRAME_SAMPLES = 320, VAD_FRAME_MS = 20;
@@ -223,7 +216,7 @@ export function createConversationStore(ctx) {
             if (typeof ev.data !== 'string') { play.push(new Int16Array(ev.data)); return; }
             let j; try { j = JSON.parse(ev.data); } catch (_) { return; }
             if (j.kind === 'ready') { S().interpreter.active = true; done(resolve); return; }
-            if (j.kind === 'error') { const m = j.msg || 'interpreter error'; if (!settled) done(reject, new Error(m)); else setStatus(m); return; }
+            if (j.kind === 'error') { const m = j.msg || 'interpreter error'; if (!settled) done(reject, new Error(m)); else showError(new Error(m)); return; }
             if (j.kind === 'src') interp.onDelta('src', j.text);
             else if (j.kind === 'dst') interp.onDelta('dst', j.text);
           };
@@ -335,7 +328,12 @@ export function createConversationStore(ctx) {
 
   speechStream.onClip((laneId, pcm) => { const ln = laneId === 'mic' ? micLane : sysLane; if (S().listening && S().lanes[laneId].enabled) { ln.queue.push(pcm); void ln.drain(); } });
   speechStream.onProb((laneId, prob) => { const ln = laneId === 'mic' ? micLane : sysLane; if (ln.meter) ln.meter.style.width = Math.min(100, Math.round(prob * 100)) + '%'; });
-  speechStream.onBroken(() => { if (detMode === 'streaming') { detMode = 'filter'; setStatus(tt('run.status.Listening') + ' · speech detection fell back to RMS + filter'); if (S().listening) restartLanes(); } });
+  speechStream.onBroken(() => {
+    if (detMode !== 'streaming') return;
+    detMode = 'filter';
+    ctx.Toasts?.push?.({ severity: 'warn', title: tt('toast.generic'), msg: 'Speech detection fell back to RMS + filter.' });
+    if (S().listening) restartLanes();
+  });
 
   async function restartLanes() {
     for (const ln of [micLane, sysLane]) if (S().lanes[ln.kind].enabled) ln.stop();
@@ -452,7 +450,7 @@ export function createConversationStore(ctx) {
     changeDevice(kind) {
       if (!this.listening || !this.lanes[kind].enabled) return;
       const lane = kind === 'mic' ? micLane : sysLane;
-      lane.stop(); lane.start().catch((e) => setStatus(String(e?.message || e)));
+      lane.stop(); lane.start().catch((e) => showError(e, tt('conv.laneStartFailed', { lane: kind === 'mic' ? tt('conv.mic') : tt('conv.sys') })));
     },
     sendComposer(text) { this.composer = ''; sendOutgoing(text || ''); },
 
@@ -473,7 +471,7 @@ export function createConversationStore(ctx) {
     setInterpreterEcho(v) {
       this.interpreter.echo = !!v;
       try { localStorage.setItem('pt.interpreter.echo', v ? '1' : '0'); } catch (_) {}
-      if (this.listening && this.interpreter.on && interp.ws) { interp.close(); if (this.lanes.mic.enabled) interp.open().catch((e) => setStatus(String(e?.message || e))); }
+      if (this.listening && this.interpreter.on && interp.ws) { interp.close(); if (this.lanes.mic.enabled) interp.open().catch((e) => showError(e, tt('conv.interpFailed'))); }
     },
     changeInterpreterDevice() {
       try { localStorage.setItem('pt.interpreter.device', this.interpreter.outputDevice || ''); } catch (_) {}
