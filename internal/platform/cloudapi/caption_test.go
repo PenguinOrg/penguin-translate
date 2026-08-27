@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -18,6 +19,27 @@ func TestResolveDashScope(t *testing.T) {
 	}
 	if provider != "dashscope" || key != "k" || base != dashScopeDefaultBase {
 		t.Fatalf("resolve = key:%q base:%q provider:%q", key, base, provider)
+	}
+}
+
+func TestParseTranslationBatchAcceptsCommonShapes(t *testing.T) {
+	tests := []struct {
+		name string
+		raw  string
+		n    int
+		want []string
+	}{
+		{name: "indexed objects", raw: `[{"i":0,"en":"one"},{"i":1,"en":"two"}]`, n: 2, want: []string{"one", "two"}},
+		{name: "fenced wrapped alternate keys", raw: "```json\n{\"translations\":[{\"translation\":\"uno\"},{\"text\":\"dos\"}]}\n```", n: 2, want: []string{"uno", "dos"}},
+		{name: "string array", raw: `["one","two"]`, n: 2, want: []string{"one", "two"}},
+		{name: "numeric object keys", raw: `{"0":"one","1":"two"}`, n: 2, want: []string{"one", "two"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := parseTranslationBatch(tt.raw, tt.n); !reflect.DeepEqual(got, tt.want) {
+				t.Fatalf("parseTranslationBatch() = %#v, want %#v", got, tt.want)
+			}
+		})
 	}
 }
 

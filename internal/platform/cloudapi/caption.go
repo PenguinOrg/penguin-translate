@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -349,6 +351,7 @@ func BatchTranslateToEN(creds Credentials, model, sourceLang, extraContext strin
 	}
 	parsed := parseTranslationBatch(raw, len(lines))
 	if parsed == nil {
+		log.Printf("caption: translation batch parse failed model=%q source=%q lines=%d response=%s", model, lang, len(lines), truncate(raw, 1000))
 		return nil, fmt.Errorf("translation batch parse failed")
 	}
 	return parsed, nil
@@ -431,6 +434,9 @@ func parseTranslationBatch(raw string, n int) []string {
 					}
 				}
 			}
+			if out := translationsFromMap(v, n); out != nil {
+				return out
+			}
 		}
 	}
 	if n == 1 && raw != "" && !strings.HasPrefix(strings.TrimSpace(raw), "[") && !strings.HasPrefix(strings.TrimSpace(raw), "{") {
@@ -445,28 +451,90 @@ func fixTrailingCommas(s string) string {
 
 func translationsFromArray(arr []any, n int) []string {
 	out := make([]string, n)
+	used := make([]bool, n)
 	got := 0
 	for _, item := range arr {
-		m, ok := item.(map[string]any)
-		if !ok {
-			continue
-		}
 		idx := -1
-		switch v := m["i"].(type) {
-		case float64:
-			idx = int(v)
-		case json.Number:
-			i, _ := v.Int64()
-			idx = int(i)
+		text := ""
+		if m, ok := item.(map[string]any); ok {
+			idx = translationIndex(m["i"])
+			text, _ = translationText(m)
+		} else if v, ok := item.(string); ok {
+			text = strings.TrimSpace(v)
 		}
-		if idx < 0 || idx >= n {
+		if idx < 0 {
+			for idx = 0; idx < n && used[idx]; idx++ {
+			}
+		}
+		if idx < 0 || idx >= n || used[idx] || text == "" {
 			continue
 		}
-		en := m["en"]
-		if en == nil {
-			en = m["english"]
+		out[idx] = text
+		used[idx] = true
+		got++
+	}
+	if got == 0 {
+		return nil
+	}
+	return out
+}
+
+func translationIndex(v any) int {
+	switch v := v.(type) {
+	case float64:
+		return int(v)
+	case int:
+		return v
+	case int64:
+		return int(v)
+	case json.Number:
+		i, err := v.Int64()
+		if err != nil {
+			return -1
 		}
-		out[idx] = strings.TrimSpace(fmt.Sprint(en))
+		return int(i)
+	case string:
+		i, err := strconv.Atoi(strings.TrimSpace(v))
+		if err != nil {
+			return -1
+		}
+		return i
+	default:
+		return -1
+	}
+}
+
+func translationText(m map[string]any) (string, bool) {
+	for _, key := range []string{"en", "english", "translation", "translated", "text", "target"} {
+		if value, ok := m[key]; ok && value != nil {
+			text := strings.TrimSpace(fmt.Sprint(value))
+			if text != "" && text != "<nil>" {
+				return text, true
+			}
+		}
+	}
+	return "", false
+}
+
+func translationsFromMap(m map[string]any, n int) []string {
+	out := make([]string, n)
+	got := 0
+	for key, value := range m {
+		idx, err := strconv.Atoi(strings.TrimSpace(key))
+		if err != nil || idx < 0 || idx >= n || strings.TrimSpace(out[idx]) != "" {
+			continue
+		}
+		text := ""
+		if nested, ok := value.(map[string]any); ok {
+			text, _ = translationText(nested)
+
+		} else if raw, ok := value.(string); ok {
+			text = strings.TrimSpace(raw)
+		}
+		if text == "" {
+			continue
+		}
+		out[idx] = text
 		got++
 	}
 	if got == 0 {
