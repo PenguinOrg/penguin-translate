@@ -2,7 +2,7 @@ import Alpine from '/ui/shared/alpine.esm.js';
 import { floatTo16kMono, buildWav, createSpeechSegmenter, scaleToRms, rmsToScale } from '/ui/shared/dsp.js';
 import { getSileroGate } from '/ui/shared/vad/silero.js';
 import { getSileroStream } from '/ui/shared/vad/silero-stream.js';
-import { httpErrorMessage } from '/ui/shared/http.js';
+import { httpErrorMessage, postJSON } from '/ui/shared/http.js';
 
 let styleInjected = false;
 function ensureStyle() {
@@ -18,6 +18,10 @@ export function createConversationStore(ctx) {
   ensureStyle();
   const tt = (k, p) => Alpine.store('i18n').t(k, p);
   const langName = (id, fb) => Alpine.store('i18n').langName(id, fb);
+  const showError = (e, title = tt('toast.generic')) => {
+    const msg = String(e?.message || e);
+    ctx.Toasts?.push?.({ title, msg, timeout: 8000, dedupeKey: `conversation-error:${title}:${msg}` });
+  };
   // The module-local engine MUST read/write state through S() (the Alpine reactive
   // proxy); mutating the raw returned object directly would skip reactivity.
   const S = () => Alpine.store('conversation');
@@ -29,7 +33,19 @@ export function createConversationStore(ctx) {
     : { id: '', label: 'Detected', short_label: '··', flag: '🌐', asr_code: '', reading_aid: 'none' });
 
   async function loadCatalog() { try { const r = await fetch('/api/languages'); if (!r.ok) return; const j = await r.json(); (j.catalog || []).forEach((l) => catalog.set(l.id, l)); } catch (_) {} }
-  async function loadLangsFromSettings() { try { const r = await fetch('/api/settings'); if (!r.ok) return; const p = (await r.json()).practice || {}; if (p.my_language) myLang = p.my_language; if (Array.isArray(p.other_languages) && p.other_languages.length) otherLangs = p.other_languages; } catch (_) {} }
+  async function loadPracticeSettings() {
+    try {
+      const r = await fetch('/api/settings');
+      if (!r.ok) return {};
+      const p = (await r.json()).practice || {};
+      if (p.my_language) myLang = p.my_language;
+      if (Array.isArray(p.other_languages) && p.other_languages.length) otherLangs = p.other_languages;
+      return p;
+    } catch (_) { return {}; }
+  }
+  async function persistSessionActive(active) {
+    await postJSON('/api/settings', { practice: { session_active: !!active } }, 'POST /api/settings');
+  }
 
   const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const clock = () => { const d = new Date(); const z = (n) => (n < 10 ? '0' : '') + n; return z(d.getHours()) + ':' + z(d.getMinutes()) + ':' + z(d.getSeconds()); };
@@ -376,17 +392,36 @@ export function createConversationStore(ctx) {
     if (errs.length) ctx.Toasts?.push?.({ title: tt('conv.oneInputFailed'), msg: errs.join(' · ') });
     if (cfg.desktopOverlay) { try { await fetch('/api/desktop-overlay/start', { method: 'POST' }); await fetch('/api/audio/apply-overlay-layout', { method: 'POST' }); } catch (_) {} }
     if (cfg.openvr) { try { await fetch('/api/overlay/start', { method: 'POST' }); } catch (_) {} }
-    setStatus(tt('run.status.Listening'));
     if (S().lanes.mic.enabled) { populateMics().catch(() => {}); populateSinks().catch(() => {}); }
   }
   function stopListen() {
     S().listening = false; interp.close(); micLane.stop(); sysLane.stop();
     fetch('/api/desktop-overlay/clear', { method: 'POST' }).catch(() => {});
     fetch('/api/overlay/clear', { method: 'POST' }).catch(() => {});
-    setStatus(tt('conv.statusStopped'));
   }
 
-  let busy = false;
+  let busy = false, sessionTouched = false, desiredListening = false;
+  async function reconcileListening(persistInitial = true) {
+    if (busy) return;
+    busy = true;
+    let first = true;
+    try {
+      while (S().listening !== desiredListening) {
+        const target = desiredListening;
+        try { if (target) await startListen(); else stopListen(); }
+        catch (e) {
+          desiredListening = S().listening;
+          ctx.Toasts?.push?.({ title: tt(target ? 'run.couldNotStart' : 'run.couldNotStop', { name: tt('conv.title') || 'Conversation' }), msg: String(e?.message || e) });
+          break;
+        }
+        const shouldPersist = persistInitial || !first;
+        first = false;
+        if (target !== desiredListening || !shouldPersist) continue;
+        try { await persistSessionActive(target); }
+        catch (e) { showError(e, tt('prefs.saveFailed')); }
+      }
+    } finally { busy = false; }
+  }
   function bindMeters() {
     micLane.meter = document.querySelector('.runbar .lane-mic .lane-meter > i');
     sysLane.meter = document.querySelector('.runbar .lane-sys .lane-meter > i');
@@ -396,20 +431,16 @@ export function createConversationStore(ctx) {
     id: 'conversation',
     turns: [],
     listening: false,
-    status: '',
     composer: '',
     lanes: { mic: { enabled: true, devices: [], device: '' }, sys: { enabled: true, devices: [], device: '' } },
     interpreter: { on: false, active: false, echo: false, outputDevices: [], outputDevice: '', liveSrc: '', liveDst: '' },
     get empty() { return this.turns.length === 0; },
-    get statusText() { return this.status || (this.listening ? tt('run.status.Listening') : tt('run.status.Idle')); },
     get interpreterTargetLabel() { const t = interpreterTarget(); const L = lang(t); return L.flag + ' ' + langName(t, L.label); },
 
     async toggleListen() {
-      if (busy) return; busy = true;
-      const wasRunning = this.listening;
-      try { if (wasRunning) stopListen(); else await startListen(); }
-      catch (e) { ctx.Toasts?.push?.({ title: tt(wasRunning ? 'run.couldNotStop' : 'run.couldNotStart', { name: tt('conv.title') || 'Conversation' }), msg: String(e?.message || e) }); }
-      finally { busy = false; }
+      sessionTouched = true;
+      desiredListening = !desiredListening;
+      await reconcileListening();
     },
     async toggleLane(kind) {
       const stl = this.lanes[kind]; stl.enabled = !stl.enabled;
@@ -465,7 +496,7 @@ export function createConversationStore(ctx) {
       document.addEventListener('langschange', (e) => { const d = e.detail || {}; if (d.my) myLang = d.my; if (Array.isArray(d.others)) otherLangs = d.others; });
       bindMeters();
       await loadCatalog();
-      await loadLangsFromSettings();
+      const practice = await loadPracticeSettings();
       await refreshCfg();
       syncOverlaysFromSettings().catch(() => {});
       await populateMics().catch(() => {});
@@ -473,7 +504,10 @@ export function createConversationStore(ctx) {
       await populateSinks().catch(() => {});
       try { this.interpreter.echo = localStorage.getItem('pt.interpreter.echo') === '1'; } catch (_) {}
       document.addEventListener('audioprefschange', (e) => { const d = e.detail || {}; if (Number(d.vad_sensitivity) > 0) vadPct = Number(d.vad_sensitivity); if (typeof d.speech_detection === 'string' && d.speech_detection !== detMode) { detMode = d.speech_detection; if (S().listening) restartLanes(); } if (Number(d.clip_max_sec) > 0) clipMaxSec = Number(d.clip_max_sec); });
-      setStatus(tt('conv.statusIdle'));
+      if (practice.session_active && !sessionTouched && !this.listening) {
+        desiredListening = true;
+        await reconcileListening(false);
+      }
     },
   };
 
