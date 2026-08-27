@@ -32,7 +32,13 @@
     .langbar-inline .you b { color: var(--text); font-weight: 600; cursor: pointer; border-bottom: 1px dotted var(--border-strong); }
     .langbar-inline .arrow { color: #8fb0ff; }
     .langbar-inline .set { display: flex; align-items: center; gap: 6px; }
-    .langbar-inline .lchip { display: flex; align-items: center; gap: 5px; background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: 7px; padding: 3px 7px; color: var(--text-bright); font-size: 12px; }
+    .langbar-inline .lchip { position: relative; display: flex; align-items: center; gap: 5px; background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: 7px; padding: 3px 7px; color: var(--text-bright); font-size: 12px; cursor: grab; user-select: none; }
+    .langbar-inline .lchip:active { cursor: grabbing; }
+    .langbar-inline .lchip.is-dragging { opacity: .45; }
+    .langbar-inline .lchip.drop-before::before,
+    .langbar-inline .lchip.drop-after::after { content: ""; position: absolute; top: 2px; bottom: 2px; width: 2px; border-radius: 2px; background: var(--accent); }
+    .langbar-inline .lchip.drop-before::before { left: -5px; }
+    .langbar-inline .lchip.drop-after::after { right: -5px; }
     .langbar-inline .lchip .flag { font-size: 12px; }
     .langbar-inline .lchip .x { color: var(--faint); font-size: 11px; cursor: pointer; }
     .langbar-inline .lchip .x:hover { color: var(--err); }
@@ -110,10 +116,13 @@
       <span class="arrow">→</span>
       <div class="set" id="langSet">
         <template x-for="id in $store.langs.others" :key="id">
-          <span class="lchip" :title="$store.langs.label(id)">
+          <span class="lchip" :title="$store.langs.label(id)" draggable="true"
+                :class="{ 'is-dragging': draggedLanguage === id, 'drop-before': dropLanguage === id && !dropAfter, 'drop-after': dropLanguage === id && dropAfter }"
+                @dragstart="startLanguageDrag(id, $event)" @dragover.prevent="markLanguageDrop(id, $event)"
+                @drop.prevent="finishLanguageDrop(id)" @dragend="clearLanguageDrag()">
             <span class="flag" x-text="$store.langs.flag(id)"></span>
             <span x-text="$store.langs.abbr(id)"></span>
-            <span class="x" :title="$store.i18n.t('appbar.removeOutput')" @click.stop="$store.langs.removeOther(id)">✕</span>
+            <span class="x" draggable="false" :title="$store.i18n.t('appbar.removeOutput')" @mousedown.stop @click.stop="$store.langs.removeOther(id)">✕</span>
           </span>
         </template>
         <button type="button" class="add" :title="$store.i18n.t('appbar.addOutput')" @click.stop="openMenu('others', $event)">+</button>

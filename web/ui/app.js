@@ -102,14 +102,22 @@ Alpine.store('engine', {
 
 Alpine.store('langs', {
   my: 'en', others: ['ja'], catalog: [],
+  _persisting: false, _persistAgain: false,
   byId(id) { return this.catalog.find((l) => l.id === id) || { id, label: id, flag: '🏳️', short_label: (id || '').toUpperCase() }; },
   abbr(id) { const L = this.byId(id); return L.short_label || (L.id || '').toUpperCase(); },
   flag(id) { return this.byId(id).flag || ''; },
   label(id) { const L = this.byId(id); return L.label || id; },
   broadcast() { document.dispatchEvent(new CustomEvent('langschange', { detail: { my: this.my, others: this.others.slice() } })); },
   async persist() {
-    try { await postJSON('/api/settings', { practice: { my_language: this.my, other_languages: this.others } }, 'POST /api/settings'); }
-    catch (e) { Alpine.store('toasts').push({ title: i18n.t('toast.saveLangsFailed'), msg: String(e?.message || e) }); }
+    if (this._persisting) { this._persistAgain = true; return; }
+    this._persisting = true;
+    try {
+      do {
+        this._persistAgain = false;
+        try { await postJSON('/api/settings', { practice: { my_language: this.my, other_languages: this.others } }, 'POST /api/settings'); }
+        catch (e) { Alpine.store('toasts').push({ title: i18n.t('toast.saveLangsFailed'), msg: String(e?.message || e) }); }
+      } while (this._persistAgain);
+    } finally { this._persisting = false; }
   },
   pickMy(id) {
     if (id === this.my) return;
@@ -122,6 +130,16 @@ Alpine.store('langs', {
     if (id === this.my) return;
     if (this.others.includes(id)) { if (this.others.length > 1) this.others = this.others.filter((o) => o !== id); }
     else this.others = [...this.others, id];
+    this.persist(); this.broadcast();
+  },
+  reorderOther(id, targetId, after = false) {
+    if (id === targetId || !this.others.includes(id) || !this.others.includes(targetId)) return;
+    const next = this.others.filter((other) => other !== id);
+    let targetIndex = next.indexOf(targetId);
+    if (after) targetIndex += 1;
+    next.splice(targetIndex, 0, id);
+    if (next.every((other, index) => other === this.others[index])) return;
+    this.others = next;
     this.persist(); this.broadcast();
   },
   removeOther(id) { if (this.others.length <= 1) return; this.others = this.others.filter((o) => o !== id); this.persist(); this.broadcast(); },
@@ -146,6 +164,9 @@ const I18n = Alpine.store('i18n');
 Alpine.data('langbar', () => ({
   menuOpen: false,
   menuMode: null,
+  draggedLanguage: null,
+  dropLanguage: null,
+  dropAfter: false,
   menuItems() {
     const L = this.$store.langs;
     return L.catalog.filter((l) => (this.menuMode === 'others' ? l.id !== L.my : true));
@@ -164,6 +185,35 @@ Alpine.data('langbar', () => ({
   pick(id) {
     if (this.menuMode === 'my') { this.$store.langs.pickMy(id); this.closeMenu(); }
     else this.$store.langs.toggleOther(id);
+  },
+  startLanguageDrag(id, ev) {
+    this.draggedLanguage = id;
+    this.dropLanguage = null;
+    if (ev.dataTransfer) {
+      ev.dataTransfer.effectAllowed = 'move';
+      ev.dataTransfer.setData('text/plain', id);
+    }
+  },
+  markLanguageDrop(id, ev) {
+    if (!this.draggedLanguage || this.draggedLanguage === id) {
+      this.dropLanguage = null;
+      return;
+    }
+    const rect = ev.currentTarget.getBoundingClientRect();
+    this.dropLanguage = id;
+    this.dropAfter = ev.clientX >= rect.left + (rect.width / 2);
+    if (ev.dataTransfer) ev.dataTransfer.dropEffect = 'move';
+  },
+  finishLanguageDrop(id) {
+    if (this.draggedLanguage && this.draggedLanguage !== id) {
+      this.$store.langs.reorderOther(this.draggedLanguage, id, this.dropAfter);
+    }
+    this.clearLanguageDrag();
+  },
+  clearLanguageDrag() {
+    this.draggedLanguage = null;
+    this.dropLanguage = null;
+    this.dropAfter = false;
   },
   position(anchor) {
     const menu = this.$refs.menu; if (!menu || !anchor) return;
